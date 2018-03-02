@@ -315,7 +315,6 @@ class Visualizer():
 
     def visualize_scroll(self, y):
         """Effect that originates in the center and scrolls outwards"""
-        global p
         y = y**4.0
         signal_processers[self.board].gain.update(y)
         y /= signal_processers[self.board].gain.value
@@ -325,19 +324,18 @@ class Visualizer():
         b = int(np.max(y[2 * len(y) // 3:])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["b_multiplier"])
         # Scrolling effect window
         speed = config.settings["devices"][self.board]["effect_opts"]["Scroll"]["speed"]
-        p[:, speed:] = p[:, :-speed]
-        p *= config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]
-        p = gaussian_filter1d(p, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
+        self.prev_output[:, speed:] = self.prev_output[:, :-speed]
+        self.prev_output *= config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]
+        self.prev_output = gaussian_filter1d(self.prev_output, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
         # Create new color originating at the center
-        p[0, :speed] = r
-        p[1, :speed] = g
-        p[2, :speed] = b
+        self.prev_output[0, :speed] = r
+        self.prev_output[1, :speed] = g
+        self.prev_output[2, :speed] = b
         # Update the LED strip
-        return np.concatenate((p[:, ::-1], p), axis=1)
+        return np.concatenate((self.prev_output[:, ::-1], self.prev_output), axis=1)
 
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
-        global p
         y = np.copy(y)
         signal_processers[self.board].gain.update(y)
         y /= signal_processers[self.board].gain.value
@@ -349,20 +347,20 @@ class Visualizer():
         g = int(np.mean(y[len(y) // 3: 2 * len(y) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["g_multiplier"])
         b = int(np.mean(y[2 * len(y) // 3:]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["b_multiplier"])
         # Assign color to different frequency regions
-        p[0, :r] = 255.0
-        p[0, r:] = 0.0
-        p[1, :g] = 255.0
-        p[1, g:] = 0.0
-        p[2, :b] = 255.0
-        p[2, b:] = 0.0
-        signal_processers[self.board].p_filt.update(p)
-        p = np.round(signal_processers[self.board].p_filt.value)
+        self.prev_output[0, :r] = 255.0
+        self.prev_output[0, r:] = 0.0
+        self.prev_output[1, :g] = 255.0
+        self.prev_output[1, g:] = 0.0
+        self.prev_output[2, :b] = 255.0
+        self.prev_output[2, b:] = 0.0
+        signal_processers[self.board].p_filt.update(self.prev_spectrum)
+        self.prev_output = np.round(signal_processers[self.board].p_filt.value)
         # Apply blur to smooth the edges
-        p[0, :] = gaussian_filter1d(p[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        p[1, :] = gaussian_filter1d(p[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        p[2, :] = gaussian_filter1d(p[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.prev_output[0, :] = gaussian_filter1d(self.prev_output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.prev_output[1, :] = gaussian_filter1d(self.prev_output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.prev_output[2, :] = gaussian_filter1d(self.prev_output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         # Set the new pixel value
-        return np.concatenate((p[:, ::-1], p), axis=1)
+        return np.concatenate((self.prev_output[:, ::-1], self.prev_output), axis=1)
 
     def visualize_wavelength(self, y):
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
@@ -399,7 +397,6 @@ class Visualizer():
     
     def visualize_spectrum(self, y):
         """Effect that maps the Mel filterbank frequencies onto the LED strip"""
-        global p
         #print(len(y))
         #print(y)
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
@@ -726,7 +723,7 @@ class GUI(QMainWindow):
                         try:
                             pieces = test.split('.')
                             if len(pieces) != 4: return False
-                            tests.append(all(0<=int(p)<256 for p in pieces))
+                            tests.append(all(0<=int(self.prev_output)<256 for self.prev_output in pieces))
                         except:
                             tests.append(False)
                     elif req_config_setting == "UDP_PORT":
