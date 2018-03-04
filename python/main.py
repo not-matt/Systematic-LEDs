@@ -47,7 +47,8 @@ class Visualizer():
         self.beat_count = 0
         self.freq_channels = [deque(maxlen=self.freq_channel_history) for i in range(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"])]
         self.prev_output = np.array([[0 for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])] for i in range(3)])
-        self.prev_spectrum = [0 for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2)]
+        self.output = np.array([[0 for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])] for i in range(3)])
+        self.prev_spectrum = np.array([config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2])
         self.current_freq_detects = {"beat":False,
                                      "low":False,
                                      "mid":False,
@@ -149,8 +150,9 @@ class Visualizer():
                                                  ["g", "Green value", "slider", (0,255,1)],
                                                  ["b", "Blue value", "slider", (0,255,1)]]
                                        }
-        # Setup for latency timer
-        self.latency_deque = deque(maxlen=1000)
+        # Setup for fps counter
+        self.frame_counter = 0
+        self.start_time = time.time()
         # Setup for "Wave" (don't change these)
         self.wave_wipe_count = 0
         # Setup for "Power" (don't change these)
@@ -270,17 +272,23 @@ class Visualizer():
     def get_vis(self, y, audio_input):
         self.update_freq_channels(y)
         self.detect_freqs()
-        time1 = time.time()
         if config.settings["devices"][self.board]["configuration"]["current_effect"] in self.non_reactive_effects:
             self.prev_output = self.effects[config.settings["devices"][self.board]["configuration"]["current_effect"]]()
         elif audio_input:
             self.prev_output = self.effects[config.settings["devices"][self.board]["configuration"]["current_effect"]](y)
         else:
             self.prev_output = np.multiply(self.prev_output, 0.95)
-        time2 = time.time()
-        self.latency_deque.append(1000*(time2-time1))
-        if config.settings["configuration"]["USE_GUI"]:
-            gui.label_latency.setText("{} ms Processing Latency   ".format(int(sum(self.latency_deque)/len(self.latency_deque))))
+        self.frame_counter += 1
+        elapsed = time.time() - self.start_time
+        if elapsed >= 1.0:
+            self.start_time = time.time()
+            fps = self.frame_counter//elapsed
+            latency = elapsed/self.frame_counter
+            self.frame_counter = 0
+
+            if config.settings["configuration"]["USE_GUI"]:
+                gui.label_latency.setText("{:0.3f} ms Processing Latency   ".format(latency))
+                gui.label_fps.setText('{:.0f} / {:.0f} FPS   '.format(fps, config.settings["configuration"]["FPS"]))
         return self.prev_output
 
     def _split_equal(self, value, parts):
@@ -324,15 +332,15 @@ class Visualizer():
         b = int(np.max(y[2 * len(y) // 3:])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["b_multiplier"])
         # Scrolling effect window
         speed = config.settings["devices"][self.board]["effect_opts"]["Scroll"]["speed"]
-        self.prev_output[:, speed:] = self.prev_output[:, :-speed]
-        self.prev_output *= config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]
-        self.prev_output = gaussian_filter1d(self.prev_output, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
+        self.prev_spectrum[:, speed:] = self.prev_spectrum[:, :-speed]
+        self.prev_spectrum *= config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]
+        self.prev_spectrum = gaussian_filter1d(self.prev_spectrum, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
         # Create new color originating at the center
-        self.prev_output[0, :speed] = r
-        self.prev_output[1, :speed] = g
-        self.prev_output[2, :speed] = b
+        self.prev_spectrum[0, :speed] = r
+        self.prev_spectrum[1, :speed] = g
+        self.prev_spectrum[2, :speed] = b
         # Update the LED strip
-        return np.concatenate((self.prev_output[:, ::-1], self.prev_output), axis=1)
+        return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
 
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
@@ -343,24 +351,28 @@ class Visualizer():
         # Scale by the width of the LED strip
         y *= float((config.settings["devices"][self.board]["configuration"]["N_PIXELS"] * scale) - 1)
         # Map color channels according to energy in the different freq bands
-        r = int(np.mean(y[:len(y) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["r_multiplier"])
-        g = int(np.mean(y[len(y) // 3: 2 * len(y) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["g_multiplier"])
-        b = int(np.mean(y[2 * len(y) // 3:]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["b_multiplier"])
+        #y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
+        diff = y - self.prev_spectrum
+        self.prev_spectrum = np.copy(y)
+        spectrum = np.copy(self.prev_spectrum)
+        spectrum = np.array([j for i in zip(spectrum,spectrum) for j in i])
+        # Color channel mappings
+        r = int(np.mean(spectrum[:len(spectrum) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["r_multiplier"])
+        g = int(np.mean(spectrum[len(spectrum) // 3: 2 * len(spectrum) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["g_multiplier"])
+        b = int(np.mean(spectrum[2 * len(spectrum) // 3:]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["b_multiplier"])
         # Assign color to different frequency regions
-        self.prev_output[0, :r] = 255.0
-        self.prev_output[0, r:] = 0.0
-        self.prev_output[1, :g] = 255.0
-        self.prev_output[1, g:] = 0.0
-        self.prev_output[2, :b] = 255.0
-        self.prev_output[2, b:] = 0.0
-        signal_processers[self.board].p_filt.update(self.prev_spectrum)
-        self.prev_output = np.round(signal_processers[self.board].p_filt.value)
+        print(r,g,b)
+        self.output[0, :r] = 255
+        self.output[0, r:] = 0
+        self.output[1, :g] = 255
+        self.output[1, g:] = 0
+        self.output[2, :b] = 255
+        self.output[2, b:] = 0
         # Apply blur to smooth the edges
-        self.prev_output[0, :] = gaussian_filter1d(self.prev_output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        self.prev_output[1, :] = gaussian_filter1d(self.prev_output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        self.prev_output[2, :] = gaussian_filter1d(self.prev_output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        # Set the new pixel value
-        return np.concatenate((self.prev_output[:, ::-1], self.prev_output), axis=1)
+        self.output[0, :] = gaussian_filter1d(self.output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.output[1, :] = gaussian_filter1d(self.output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.output[2, :] = gaussian_filter1d(self.output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        return self.output
 
     def visualize_wavelength(self, y):
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
@@ -369,7 +381,7 @@ class Visualizer():
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
         r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
-        #g = np.abs(diff)
+        g = np.abs(diff)
         b = signal_processers[self.board].b_filt.update(np.copy(y))
         r = np.array([j for i in zip(r,r) for j in i])
         output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][0][
@@ -638,7 +650,7 @@ class GUI(QMainWindow):
         self.statusbar.addPermanentWidget(self.label_fps)
 
         # Set up board tabs
-        self.label_boards = QLabel("Boards")
+        self.label_boards = QLabel("LED Strips")
         self.boardsTabWidget = QTabWidget()
         # Dynamically set up boards tabs
         self.board_tabs = {}         # contains all the tabs for each board
@@ -686,16 +698,13 @@ class GUI(QMainWindow):
             event.ignore()
 
     def updateUIVisibleItems(self):
+        print("-UPDATE-")
         for section in self.gui_widgets:
             for widget in self.gui_widgets[section]:
+                print(widget.isVisible(), "          ", config.settings["GUI_opts"][section])
                 widget.setVisible(config.settings["GUI_opts"][section])
 
     def deviceDialogue(self):
-        def update_visibilty_dict():
-            for checkbox in self.gui_vis_checkboxes:
-                config.settings["GUI_opts"][checkbox] = self.gui_vis_checkboxes[checkbox].isChecked()
-            self.updateUIVisibleItems()
-
         def show_hide_addBoard_interface():
             current_device = device_type_cbox.currentText()
             for device in config.device_req_config:
@@ -833,8 +842,6 @@ class GUI(QMainWindow):
         # Show appropriate widgets
         show_hide_addBoard_interface()
 
-
-
         # self.gui_vis_checkboxes = {}
         # for section in self.gui_widgets:
         #     self.gui_vis_checkboxes[section] = QCheckBox(section)
@@ -877,7 +884,7 @@ class GUI(QMainWindow):
             self.updateUIVisibleItems()
 
         self.gui_dialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
-        self.gui_dialogue.setWindowTitle("GUI Properties")
+        self.gui_dialogue.setWindowTitle("Show/hide Interface Sections")
         self.gui_dialogue.setWindowModality(Qt.ApplicationModal)
         layout = QGridLayout()
         self.gui_dialogue.setLayout(layout)
@@ -1329,8 +1336,6 @@ def microphone_update(audio_samples):
             gui.label_error.setText("")
         else:
             gui.label_error.setText("No audio input. Volume below threshold.")
-        # Update fps counter
-        gui.label_fps.setText('{:.0f} / {:.0f} FPS'.format(fps, config.settings["configuration"]["FPS"]))
         app.processEvents()
 
     # Left in just in case prople dont use the gui
