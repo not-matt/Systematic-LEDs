@@ -1410,6 +1410,7 @@ if config.settings["configuration"]["USE_GUI"]:
     gui = GUI()
     app.processEvents()
 
+p = np.tile(1.0, (3, config.settings["devices"][board]["configuration"]["N_PIXELS"] // 2))
 prev_fps_update = time.time()
 # The previous time that the frames_per_second() function was called
 _time_prev = time.time() * 1000.0
