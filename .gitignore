@@ -5,6 +5,9 @@ ehthumbs.db
 # Folder config file
 Desktop.ini
 
+# Program settings file
+python/lib/settings.ini
+
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
