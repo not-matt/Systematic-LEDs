@@ -67,7 +67,10 @@ settings = {                                                      # All settings
                                                    "reverse_roll": False,           # Reverse movement of gradient roll
                                                    "blur": 3.0,                     # Amount of blur to apply
                                                    "flip_lr":False},                # Flip output left-right
-                                     "Scroll":    {"decay": 0.995,                  # How quickly the colour fades away as it moves
+                                     "Scroll":    {"lows_color": "Red",             # Colour of low frequencies
+                                                   "mids_color": "Green",             # Colour of mid frequencies
+                                                   "high_color": "Blue",             # Colour of high frequencies
+                                                   "decay": 0.995,                  # How quickly the colour fades away as it moves
                                                    "speed": 1,                      # Speed of scroll
                                                    "r_multiplier": 1.0,             # How much red
                                                    "g_multiplier": 1.0,             # How much green
@@ -136,7 +139,10 @@ settings = {                                                      # All settings
                                                   "reverse_roll": False,           # Reverse movement of gradient roll
                                                   "blur": 3.0,                     # Amount of blur to apply
                                                   "flip_lr":False},                # Flip output left-right
-                                    "Scroll":    {"decay": 0.995,                  # How quickly the colour fades away as it moves
+                                    "Scroll":    {"lows_color": "Red",             # Colour of low frequencies
+                                                  "mids_color": "Green",             # Colour of mid frequencies
+                                                  "high_color": "Blue",             # Colour of high frequencies
+                                                  "decay": 0.995,                  # How quickly the colour fades away as it moves
                                                   "speed": 1,                      # Speed of scroll
                                                   "r_multiplier": 1.0,             # How much red
                                                   "g_multiplier": 1.0,             # How much green

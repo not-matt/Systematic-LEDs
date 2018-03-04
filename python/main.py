@@ -119,12 +119,12 @@ class Visualizer():
                                                  ["reverse_grad", "Reverse Gradient", "checkbox"],
                                                  ["reverse_roll", "Reverse Roll", "checkbox"],
                                                  ["flip_lr", "Flip LR", "checkbox"]],
-                                       "Scroll":[["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
+                                       "Scroll":[["lows_color", "Lows Color", "dropdown", config.settings["colors"]],
+                                                 ["mids_color", "Mids Color", "dropdown", config.settings["colors"]],
+                                                 ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
+                                                 ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
                                                  ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
-                                                 ["speed", "Speed", "slider", (1,5,1)],
-                                                 ["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
-                                                 ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
-                                                 ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
+                                                 ["speed", "Speed", "slider", (1,5,1)]
                                         "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
                                                  ["s_color", "Spark Color ", "dropdown", config.settings["colors"]],
                                                  ["s_count", "Spark Amount", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//6,1)],
@@ -324,23 +324,43 @@ class Visualizer():
     def visualize_scroll(self, y):
         """Effect that originates in the center and scrolls outwards"""
         y = y**4.0
-        signal_processers[self.board].gain.update(y)
-        y /= signal_processers[self.board].gain.value
-        y *= 255.0
-        r = int(np.max(y[:len(y) // 3])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["r_multiplier"])
-        g = int(np.max(y[len(y) // 3: 2 * len(y) // 3])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["g_multiplier"])
-        b = int(np.max(y[2 * len(y) // 3:])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["b_multiplier"])
+        # signal_processers[self.board].gain.update(y)
+        # y /= signal_processers[self.board].gain.value
+        # y *= 255.0
+        n_pixels = config.settings["devices"][self.board]["configuration"]["N_PIXELS"]
+        y = np.copy(interpolate(y, n_pixels // 2))
+        signal_processers[self.board].common_mode.update(y)
+        diff = y - self.prev_spectrum
+        self.prev_spectrum = np.copy(y)
+        # split spectrum up
+        # r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
+        # g = np.abs(diff)
+        # b = signal_processers[self.board].b_filt.update(np.copy(y))
+        y = np.clip(y, 0, 1)
+        lows = y[:len(y) // 3]
+        mids = y[len(y) // 3: 2 * len(y) // 3]
+        high = y[2 * len(y) // 3:]
+        # max values
+        lows_max = np.max(lows)#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_multiplier"])
+        mids_max = float(np.max(mids))#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_multiplier"])
+        high_max = float(np.max(high))#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_multiplier"])
+        # indexes of max values
+        # map to colour gradient
+        lows_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_color"]]) * lows_max).astype(int)
+        mids_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_color"]]) * mids_max).astype(int)
+        high_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_color"]]) * high_max).astype(int)
         # Scrolling effect window
         speed = config.settings["devices"][self.board]["effect_opts"]["Scroll"]["speed"]
-        self.prev_spectrum[:, speed:] = self.prev_spectrum[:, :-speed]
-        self.prev_spectrum *= config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]
-        self.prev_spectrum = gaussian_filter1d(self.prev_spectrum, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
+        self.output[:, speed:] = self.output[:, :-speed]
+        self.output = (self.output * config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]).astype(int)
+        self.output = gaussian_filter1d(self.output, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
         # Create new color originating at the center
-        self.prev_spectrum[0, :speed] = r
-        self.prev_spectrum[1, :speed] = g
-        self.prev_spectrum[2, :speed] = b
+        self.output[0, :speed] = lows_val[0] + mids_val[0] + high_val[0]
+        self.output[1, :speed] = lows_val[1] + mids_val[1] + high_val[1]
+        self.output[2, :speed] = lows_val[2] + mids_val[2] + high_val[2]
         # Update the LED strip
-        return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
+        #return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
+        return self.output
 
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
@@ -350,6 +370,7 @@ class Visualizer():
         scale = config.settings["devices"][self.board]["effect_opts"]["Energy"]["scale"]
         # Scale by the width of the LED strip
         y *= float((config.settings["devices"][self.board]["configuration"]["N_PIXELS"] * scale) - 1)
+        y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
         # Map color channels according to energy in the different freq bands
         #y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
         diff = y - self.prev_spectrum
@@ -361,7 +382,6 @@ class Visualizer():
         g = int(np.mean(spectrum[len(spectrum) // 3: 2 * len(spectrum) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["g_multiplier"])
         b = int(np.mean(spectrum[2 * len(spectrum) // 3:]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["b_multiplier"])
         # Assign color to different frequency regions
-        print(r,g,b)
         self.output[0, :r] = 255
         self.output[0, r:] = 0
         self.output[1, :g] = 255
@@ -550,7 +570,7 @@ class Visualizer():
         return output
 
     def visualize_pulse(self, y):
-        """fckin dope ass visuals that's what"""
+        """dope ass visuals that's what"""
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_color"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_speed"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_length"]
