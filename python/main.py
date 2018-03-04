@@ -718,10 +718,10 @@ class GUI(QMainWindow):
             event.ignore()
 
     def updateUIVisibleItems(self):
-        print("-UPDATE-")
+        #print("-UPDATE-")
         for section in self.gui_widgets:
             for widget in self.gui_widgets[section]:
-                print(widget.isVisible(), "          ", config.settings["GUI_opts"][section])
+                #print(widget.isVisible(), "          ", config.settings["GUI_opts"][section])
                 widget.setVisible(config.settings["GUI_opts"][section])
 
     def deviceDialogue(self):
