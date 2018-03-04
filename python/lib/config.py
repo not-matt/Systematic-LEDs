@@ -20,7 +20,7 @@ settings = {                                                      # All settings
                      'MAX_FREQUENCY': 18000,                      # Frequencies above this value will be removed during audio processing
                      'MAX_BRIGHTNESS': 250,                       # Frequencies above this value will be removed during audio processing
                      'N_ROLLING_HISTORY': 4,                      # Number of past audio frames to include in the rolling window
-                     'MIN_VOLUME_THRESHOLD': 0.01                 # No music visualization displayed if recorded audio volume below threshold
+                     'MIN_VOLUME_THRESHOLD': 0.001                # No music visualization displayed if recorded audio volume below threshold
                     #'LOGARITHMIC_SCALING': True,                 # Scale frequencies logarithmically to match perceived pitch of human ear
                      },
 
@@ -42,7 +42,7 @@ settings = {                                                      # All settings
                                          # Other configuration 
                                        "N_PIXELS": 58,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
                                        "N_FFT_BINS": 24,                            # Number of frequency bins to use when transforming audio to frequency domain
-                                       "current_effect": "Single"                   # Currently selected effect for this board, used as default when program launches
+                                       "current_effect": "Energy"                   # Currently selected effect for this board, used as default when program launches
                                       },
     
                       # Configurable options for this board's effects go in this dictionary.
@@ -67,7 +67,10 @@ settings = {                                                      # All settings
                                                    "reverse_roll": False,           # Reverse movement of gradient roll
                                                    "blur": 3.0,                     # Amount of blur to apply
                                                    "flip_lr":False},                # Flip output left-right
-                                     "Scroll":    {"decay": 0.995,                  # How quickly the colour fades away as it moves
+                                     "Scroll":    {"lows_color": "Red",             # Colour of low frequencies
+                                                   "mids_color": "Green",             # Colour of mid frequencies
+                                                   "high_color": "Blue",             # Colour of high frequencies
+                                                   "decay": 0.995,                  # How quickly the colour fades away as it moves
                                                    "speed": 1,                      # Speed of scroll
                                                    "r_multiplier": 1.0,             # How much red
                                                    "g_multiplier": 1.0,             # How much green
@@ -136,7 +139,10 @@ settings = {                                                      # All settings
                                                   "reverse_roll": False,           # Reverse movement of gradient roll
                                                   "blur": 3.0,                     # Amount of blur to apply
                                                   "flip_lr":False},                # Flip output left-right
-                                    "Scroll":    {"decay": 0.995,                  # How quickly the colour fades away as it moves
+                                    "Scroll":    {"lows_color": "Red",             # Colour of low frequencies
+                                                  "mids_color": "Green",             # Colour of mid frequencies
+                                                  "high_color": "Blue",             # Colour of high frequencies
+                                                  "decay": 0.995,                  # How quickly the colour fades away as it moves
                                                   "speed": 1,                      # Speed of scroll
                                                   "r_multiplier": 1.0,             # How much red
                                                   "g_multiplier": 1.0,             # How much green

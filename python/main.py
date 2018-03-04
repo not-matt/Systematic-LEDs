@@ -47,7 +47,8 @@ class Visualizer():
         self.beat_count = 0
         self.freq_channels = [deque(maxlen=self.freq_channel_history) for i in range(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"])]
         self.prev_output = np.array([[0 for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])] for i in range(3)])
-        self.prev_spectrum = [0 for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2)]
+        self.output = np.array([[0 for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])] for i in range(3)])
+        self.prev_spectrum = np.array([config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2])
         self.current_freq_detects = {"beat":False,
                                      "low":False,
                                      "mid":False,
@@ -118,12 +119,12 @@ class Visualizer():
                                                  ["reverse_grad", "Reverse Gradient", "checkbox"],
                                                  ["reverse_roll", "Reverse Roll", "checkbox"],
                                                  ["flip_lr", "Flip LR", "checkbox"]],
-                                       "Scroll":[["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
+                                       "Scroll":[["lows_color", "Lows Color", "dropdown", config.settings["colors"]],
+                                                 ["mids_color", "Mids Color", "dropdown", config.settings["colors"]],
+                                                 ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
+                                                 ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
                                                  ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
-                                                 ["speed", "Speed", "slider", (1,5,1)],
-                                                 ["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
-                                                 ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
-                                                 ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
+                                                 ["speed", "Speed", "slider", (1,5,1)]],
                                         "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
                                                  ["s_color", "Spark Color ", "dropdown", config.settings["colors"]],
                                                  ["s_count", "Spark Amount", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//6,1)],
@@ -149,8 +150,9 @@ class Visualizer():
                                                  ["g", "Green value", "slider", (0,255,1)],
                                                  ["b", "Blue value", "slider", (0,255,1)]]
                                        }
-        # Setup for latency timer
-        self.latency_deque = deque(maxlen=1000)
+        # Setup for fps counter
+        self.frame_counter = 0
+        self.start_time = time.time()
         # Setup for "Wave" (don't change these)
         self.wave_wipe_count = 0
         # Setup for "Power" (don't change these)
@@ -270,17 +272,23 @@ class Visualizer():
     def get_vis(self, y, audio_input):
         self.update_freq_channels(y)
         self.detect_freqs()
-        time1 = time.time()
         if config.settings["devices"][self.board]["configuration"]["current_effect"] in self.non_reactive_effects:
             self.prev_output = self.effects[config.settings["devices"][self.board]["configuration"]["current_effect"]]()
         elif audio_input:
             self.prev_output = self.effects[config.settings["devices"][self.board]["configuration"]["current_effect"]](y)
         else:
             self.prev_output = np.multiply(self.prev_output, 0.95)
-        time2 = time.time()
-        self.latency_deque.append(1000*(time2-time1))
-        if config.settings["configuration"]["USE_GUI"]:
-            gui.label_latency.setText("{} ms Processing Latency   ".format(int(sum(self.latency_deque)/len(self.latency_deque))))
+        self.frame_counter += 1
+        elapsed = time.time() - self.start_time
+        if elapsed >= 1.0:
+            self.start_time = time.time()
+            fps = self.frame_counter//elapsed
+            latency = elapsed/self.frame_counter
+            self.frame_counter = 0
+
+            if config.settings["configuration"]["USE_GUI"]:
+                gui.label_latency.setText("{:0.3f} ms Processing Latency   ".format(latency))
+                gui.label_fps.setText('{:.0f} / {:.0f} FPS   '.format(fps, config.settings["configuration"]["FPS"]))
         return self.prev_output
 
     def _split_equal(self, value, parts):
@@ -315,54 +323,76 @@ class Visualizer():
 
     def visualize_scroll(self, y):
         """Effect that originates in the center and scrolls outwards"""
-        global p
         y = y**4.0
-        signal_processers[self.board].gain.update(y)
-        y /= signal_processers[self.board].gain.value
-        y *= 255.0
-        r = int(np.max(y[:len(y) // 3])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["r_multiplier"])
-        g = int(np.max(y[len(y) // 3: 2 * len(y) // 3])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["g_multiplier"])
-        b = int(np.max(y[2 * len(y) // 3:])*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["b_multiplier"])
+        # signal_processers[self.board].gain.update(y)
+        # y /= signal_processers[self.board].gain.value
+        # y *= 255.0
+        n_pixels = config.settings["devices"][self.board]["configuration"]["N_PIXELS"]
+        y = np.copy(interpolate(y, n_pixels // 2))
+        signal_processers[self.board].common_mode.update(y)
+        diff = y - self.prev_spectrum
+        self.prev_spectrum = np.copy(y)
+        # split spectrum up
+        # r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
+        # g = np.abs(diff)
+        # b = signal_processers[self.board].b_filt.update(np.copy(y))
+        y = np.clip(y, 0, 1)
+        lows = y[:len(y) // 6]
+        mids = y[len(y) // 6: 2 * len(y) // 5]
+        high = y[2 * len(y) // 5:]
+        # max values
+        lows_max = np.max(lows)#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_multiplier"])
+        mids_max = float(np.max(mids))#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_multiplier"])
+        high_max = float(np.max(high))#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_multiplier"])
+        # indexes of max values
+        # map to colour gradient
+        lows_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_color"]]) * lows_max).astype(int)
+        mids_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_color"]]) * mids_max).astype(int)
+        high_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_color"]]) * high_max).astype(int)
         # Scrolling effect window
         speed = config.settings["devices"][self.board]["effect_opts"]["Scroll"]["speed"]
-        p[:, speed:] = p[:, :-speed]
-        p *= config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]
-        p = gaussian_filter1d(p, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
+        self.output[:, speed:] = self.output[:, :-speed]
+        self.output = (self.output * config.settings["devices"][self.board]["effect_opts"]["Scroll"]["decay"]).astype(int)
+        self.output = gaussian_filter1d(self.output, sigma=config.settings["devices"][self.board]["effect_opts"]["Scroll"]["blur"])
         # Create new color originating at the center
-        p[0, :speed] = r
-        p[1, :speed] = g
-        p[2, :speed] = b
+        self.output[0, :speed] = lows_val[0] + mids_val[0] + high_val[0]
+        self.output[1, :speed] = lows_val[1] + mids_val[1] + high_val[1]
+        self.output[2, :speed] = lows_val[2] + mids_val[2] + high_val[2]
         # Update the LED strip
-        return np.concatenate((p[:, ::-1], p), axis=1)
+        #return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
+        return self.output
 
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
-        global p
         y = np.copy(y)
         signal_processers[self.board].gain.update(y)
         y /= signal_processers[self.board].gain.value
         scale = config.settings["devices"][self.board]["effect_opts"]["Energy"]["scale"]
         # Scale by the width of the LED strip
         y *= float((config.settings["devices"][self.board]["configuration"]["N_PIXELS"] * scale) - 1)
+        y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
         # Map color channels according to energy in the different freq bands
-        r = int(np.mean(y[:len(y) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["r_multiplier"])
-        g = int(np.mean(y[len(y) // 3: 2 * len(y) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["g_multiplier"])
-        b = int(np.mean(y[2 * len(y) // 3:]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["b_multiplier"])
+        #y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
+        diff = y - self.prev_spectrum
+        self.prev_spectrum = np.copy(y)
+        spectrum = np.copy(self.prev_spectrum)
+        spectrum = np.array([j for i in zip(spectrum,spectrum) for j in i])
+        # Color channel mappings
+        r = int(np.mean(spectrum[:len(spectrum) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["r_multiplier"])
+        g = int(np.mean(spectrum[len(spectrum) // 3: 2 * len(spectrum) // 3]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["g_multiplier"])
+        b = int(np.mean(spectrum[2 * len(spectrum) // 3:]**scale)*config.settings["devices"][self.board]["effect_opts"]["Energy"]["b_multiplier"])
         # Assign color to different frequency regions
-        p[0, :r] = 255.0
-        p[0, r:] = 0.0
-        p[1, :g] = 255.0
-        p[1, g:] = 0.0
-        p[2, :b] = 255.0
-        p[2, b:] = 0.0
-        signal_processers[self.board].p_filt.update(p)
-        p = np.round(signal_processers[self.board].p_filt.value)
+        self.output[0, :r] = 255
+        self.output[0, r:] = 0
+        self.output[1, :g] = 255
+        self.output[1, g:] = 0
+        self.output[2, :b] = 255
+        self.output[2, b:] = 0
         # Apply blur to smooth the edges
-        p[0, :] = gaussian_filter1d(p[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        p[1, :] = gaussian_filter1d(p[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        p[2, :] = gaussian_filter1d(p[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        # Set the new pixel value
-        return np.concatenate((p[:, ::-1], p), axis=1)
+        self.output[0, :] = gaussian_filter1d(self.output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.output[1, :] = gaussian_filter1d(self.output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        self.output[2, :] = gaussian_filter1d(self.output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
+        return self.output
 
     def visualize_wavelength(self, y):
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
@@ -371,7 +401,7 @@ class Visualizer():
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
         r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
-        #g = np.abs(diff)
+        g = np.abs(diff)
         b = signal_processers[self.board].b_filt.update(np.copy(y))
         r = np.array([j for i in zip(r,r) for j in i])
         output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][0][
@@ -399,7 +429,6 @@ class Visualizer():
     
     def visualize_spectrum(self, y):
         """Effect that maps the Mel filterbank frequencies onto the LED strip"""
-        global p
         #print(len(y))
         #print(y)
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
@@ -541,7 +570,7 @@ class Visualizer():
         return output
 
     def visualize_pulse(self, y):
-        """fckin dope ass visuals that's what"""
+        """dope ass visuals that's what"""
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_color"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_speed"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_length"]
@@ -641,7 +670,7 @@ class GUI(QMainWindow):
         self.statusbar.addPermanentWidget(self.label_fps)
 
         # Set up board tabs
-        self.label_boards = QLabel("Boards")
+        self.label_boards = QLabel("LED Strips")
         self.boardsTabWidget = QTabWidget()
         # Dynamically set up boards tabs
         self.board_tabs = {}         # contains all the tabs for each board
@@ -689,16 +718,13 @@ class GUI(QMainWindow):
             event.ignore()
 
     def updateUIVisibleItems(self):
+        #print("-UPDATE-")
         for section in self.gui_widgets:
             for widget in self.gui_widgets[section]:
+                #print(widget.isVisible(), "          ", config.settings["GUI_opts"][section])
                 widget.setVisible(config.settings["GUI_opts"][section])
 
     def deviceDialogue(self):
-        def update_visibilty_dict():
-            for checkbox in self.gui_vis_checkboxes:
-                config.settings["GUI_opts"][checkbox] = self.gui_vis_checkboxes[checkbox].isChecked()
-            self.updateUIVisibleItems()
-
         def show_hide_addBoard_interface():
             current_device = device_type_cbox.currentText()
             for device in config.device_req_config:
@@ -726,7 +752,7 @@ class GUI(QMainWindow):
                         try:
                             pieces = test.split('.')
                             if len(pieces) != 4: return False
-                            tests.append(all(0<=int(p)<256 for p in pieces))
+                            tests.append(all(0<=int(self.prev_output)<256 for self.prev_output in pieces))
                         except:
                             tests.append(False)
                     elif req_config_setting == "UDP_PORT":
@@ -836,8 +862,6 @@ class GUI(QMainWindow):
         # Show appropriate widgets
         show_hide_addBoard_interface()
 
-
-
         # self.gui_vis_checkboxes = {}
         # for section in self.gui_widgets:
         #     self.gui_vis_checkboxes[section] = QCheckBox(section)
@@ -880,7 +904,7 @@ class GUI(QMainWindow):
             self.updateUIVisibleItems()
 
         self.gui_dialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
-        self.gui_dialogue.setWindowTitle("GUI Properties")
+        self.gui_dialogue.setWindowTitle("Show/hide Interface Sections")
         self.gui_dialogue.setWindowModality(Qt.ApplicationModal)
         layout = QGridLayout()
         self.gui_dialogue.setLayout(layout)
@@ -1332,8 +1356,6 @@ def microphone_update(audio_samples):
             gui.label_error.setText("")
         else:
             gui.label_error.setText("No audio input. Volume below threshold.")
-        # Update fps counter
-        gui.label_fps.setText('{:.0f} / {:.0f} FPS'.format(fps, config.settings["configuration"]["FPS"]))
         app.processEvents()
 
     # Left in just in case prople dont use the gui
