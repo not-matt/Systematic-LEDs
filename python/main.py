@@ -124,7 +124,7 @@ class Visualizer():
                                                  ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
                                                  ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
                                                  ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
-                                                 ["speed", "Speed", "slider", (1,5,1)]
+                                                 ["speed", "Speed", "slider", (1,5,1)]],
                                         "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
                                                  ["s_color", "Spark Color ", "dropdown", config.settings["colors"]],
                                                  ["s_count", "Spark Amount", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//6,1)],
@@ -337,9 +337,9 @@ class Visualizer():
         # g = np.abs(diff)
         # b = signal_processers[self.board].b_filt.update(np.copy(y))
         y = np.clip(y, 0, 1)
-        lows = y[:len(y) // 3]
-        mids = y[len(y) // 3: 2 * len(y) // 3]
-        high = y[2 * len(y) // 3:]
+        lows = y[:len(y) // 6]
+        mids = y[len(y) // 6: 2 * len(y) // 5]
+        high = y[2 * len(y) // 5:]
         # max values
         lows_max = np.max(lows)#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_multiplier"])
         mids_max = float(np.max(mids))#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_multiplier"])
