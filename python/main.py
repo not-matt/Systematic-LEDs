@@ -673,6 +673,12 @@ class GUI(QMainWindow):
         self.label_boards = QLabel("LED Strips")
         self.boardsTabWidget = QTabWidget()
         # Dynamically set up boards tabs
+        self.gui_widgets = {}        # contains references to ares of gui for visibility settings
+        self.gui_widgets["Graphs"] = []
+        self.gui_widgets["Reactive Effect Buttons"] = []
+        self.gui_widgets["Non Reactive Effect Buttons"] = []
+        self.gui_widgets["Frequency Range"] = []
+        self.gui_widgets["Effect Options"] = []
         self.board_tabs = {}         # contains all the tabs for each board
         self.board_tabs_widgets = {} # contains all the widgets for each tab
         for board in config.settings["devices"]:
@@ -694,7 +700,12 @@ class GUI(QMainWindow):
         self.initBoardUI(board)
         self.boardsTabWidget.addTab(self.board_tabs[board],board)
         self.board_tabs[board].setLayout(self.board_tabs_widgets[board]["wrapper"])
-        pass
+
+        self.gui_widgets["Graphs"].append([self.board_tabs_widgets[board]["graph_view"]])
+        self.gui_widgets["Reactive Effect Buttons"].append([self.board_tabs_widgets[board]["label_reactive"], self.board_tabs_widgets[board]["reactive_button_grid_wrap"]])
+        self.gui_widgets["Non Reactive Effect Buttons"].append([self.board_tabs_widgets[board]["label_non_reactive"], self.board_tabs_widgets[board]["non_reactive_button_grid_wrap"]])
+        self.gui_widgets["Frequency Range"].append([self.board_tabs_widgets[board]["label_slider"], self.board_tabs_widgets[board]["freq_slider"]])
+        self.gui_widgets["Effect Options"].append([self.board_tabs_widgets[board]["label_options"], self.board_tabs_widgets[board]["opts_tabs"]])
 
     def closeEvent(self, event):
         # executed when the window is being closed
@@ -720,9 +731,9 @@ class GUI(QMainWindow):
     def updateUIVisibleItems(self):
         #print("-UPDATE-")
         for section in self.gui_widgets:
-            for widget in self.gui_widgets[section]:
-                #print(widget.isVisible(), "          ", config.settings["GUI_opts"][section])
-                widget.setVisible(config.settings["GUI_opts"][section])
+            for widgets in self.gui_widgets[section]:
+                for widget in widgets:
+                    widget.setVisible(config.settings["GUI_opts"][section])
 
     def deviceDialogue(self):
         def show_hide_addBoard_interface():
@@ -904,7 +915,7 @@ class GUI(QMainWindow):
             self.updateUIVisibleItems()
 
         self.gui_dialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
-        self.gui_dialogue.setWindowTitle("Show/hide Interface Sections")
+        self.gui_dialogue.setWindowTitle("Show/hide Sections")
         self.gui_dialogue.setWindowModality(Qt.ApplicationModal)
         layout = QGridLayout()
         self.gui_dialogue.setLayout(layout)
@@ -1015,21 +1026,20 @@ class GUI(QMainWindow):
             maxf = self.board_tabs_widgets[board]["freq_slider"].tickValue(1)**2.0 * (config.settings["configuration"]["MIC_RATE"] / 2.0)
             t = 'Frequency range: {:.0f} - {:.0f} Hz'.format(minf, maxf)
             freq_label.setText(t)
-            config.settings["configuration"]["MIN_FREQUENCY"] = minf
-            config.settings["configuration"]["MAX_FREQUENCY"] = maxf
+            config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"] = minf
+            config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"] = maxf
             signal_processers[self.board].create_mel_bank()
         def set_freq_min():
-            print("yes")
-            config.settings["configuration"]["MIN_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].start()
-            signal_processers[self.board].create_mel_bank()
+            config.settings["devices"][board]["configuration"]["MIN_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].start()
+            signal_processers[board].create_mel_bank()
         def set_freq_max():
-            config.settings["configuration"]["MAX_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].end()
-            signal_processers[self.board].create_mel_bank()
+            config.settings["devices"][board]["configuration"]["MAX_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].end()
+            signal_processers[board].create_mel_bank()
         self.board_tabs_widgets[board]["freq_slider"] = QRangeSlider()
         self.board_tabs_widgets[board]["freq_slider"].show()
         self.board_tabs_widgets[board]["freq_slider"].setMin(0)
         self.board_tabs_widgets[board]["freq_slider"].setMax(20000)
-        self.board_tabs_widgets[board]["freq_slider"].setRange(config.settings["configuration"]["MIN_FREQUENCY"], config.settings["configuration"]["MAX_FREQUENCY"])
+        self.board_tabs_widgets[board]["freq_slider"].setRange(config.settings["devices"][board]["configuration"]["MIN_FREQUENCY"], config.settings["devices"][board]["configuration"]["MAX_FREQUENCY"])
         self.board_tabs_widgets[board]["freq_slider"].setBackgroundStyle('background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #222, stop:1 #333);')
         self.board_tabs_widgets[board]["freq_slider"].setSpanStyle('background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #282, stop:1 #393);')
         self.board_tabs_widgets[board]["freq_slider"].setDrawValues(True)
@@ -1137,18 +1147,13 @@ class GUI(QMainWindow):
         self.board_tabs_widgets[board]["wrapper"].addWidget(self.board_tabs_widgets[board]["freq_slider"])
         self.board_tabs_widgets[board]["wrapper"].addWidget(self.board_tabs_widgets[board]["label_options"])
         self.board_tabs_widgets[board]["wrapper"].addWidget(self.board_tabs_widgets[board]["opts_tabs"])
-        self.gui_widgets = {"Graphs":                      [self.board_tabs_widgets[board]["graph_view"]],
-                            "Reactive Effect Buttons":     [self.board_tabs_widgets[board]["label_reactive"], self.board_tabs_widgets[board]["reactive_button_grid_wrap"]],
-                            "Non Reactive Effect Buttons": [self.board_tabs_widgets[board]["label_non_reactive"], self.board_tabs_widgets[board]["non_reactive_button_grid_wrap"]],
-                            "Frequency Range":             [self.board_tabs_widgets[board]["label_slider"], self.board_tabs_widgets[board]["freq_slider"]],
-                            "Effect Options":              [self.board_tabs_widgets[board]["label_options"], self.board_tabs_widgets[board]["opts_tabs"]]} 
 
 class DSP():
     def __init__(self, board):
         # Name of board for which this dsp instance is processing audio
         self.board = board
 
-        # Initialise filters etc. I've no idea what most of these are for but i imagine i'll be removing them eventually. 
+        # Initialise filters etc. I've no idea what most of these are for but i imagine i won't be getting rid of them soon 
         self.fft_plot_filter = dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
         self.mel_gain =        dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.01, alpha_rise=0.99)
         self.mel_smoothing =   dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
@@ -1182,7 +1187,7 @@ class DSP():
         Returns
         -------
         audio_data : dict
-            Dict containinng "mel", "x", and "y"
+            Dict containinng "mel", "vol", "x", and "y"
         """
 
         audio_data = {}
@@ -1209,7 +1214,7 @@ class DSP():
         self.mel_gain.update(np.max(gaussian_filter1d(mel, sigma=1.0)))
         mel /= self.mel_gain.value
         mel = self.mel_smoothing.update(mel)
-        x = np.linspace(config.settings["configuration"]["MIN_FREQUENCY"], config.settings["configuration"]["MAX_FREQUENCY"], len(mel))
+        x = np.linspace(config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"], config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"], len(mel))
         y = self.fft_plot_filter.update(mel)
 
         audio_data["mel"] = mel
@@ -1236,10 +1241,10 @@ class DSP():
         samples = int(config.settings["configuration"]["MIC_RATE"] * config.settings["configuration"]["N_ROLLING_HISTORY"]\
                                                    / (2.0 * config.settings["configuration"]["FPS"]))
         self.mel_y, (_, self.mel_x) = melbank.compute_melmat(num_mel_bands=config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"],
-                                                   freq_min=config.settings["configuration"]["MIN_FREQUENCY"],
-                                                   freq_max=config.settings["configuration"]["MAX_FREQUENCY"],
-                                                   num_fft_bands=samples,
-                                                   sample_rate=config.settings["configuration"]["MIC_RATE"])
+                                                             freq_min=config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"],
+                                                             freq_max=config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"],
+                                                             num_fft_bands=samples,
+                                                             sample_rate=config.settings["configuration"]["MIC_RATE"])
 
 
 def update_config_dicts():
