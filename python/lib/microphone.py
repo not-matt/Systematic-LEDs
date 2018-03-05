@@ -6,6 +6,7 @@ import lib.config as config
 
 def start_stream(callback):
 	p = pyaudio.PyAudio()
+	id=0
 	frames_per_buffer = int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
 	
 	numdevices = p.get_host_api_info_by_index(0).get('deviceCount')
