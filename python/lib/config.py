@@ -16,9 +16,7 @@ settings = {                                                      # All settings
                      'DISPLAY_FPS': False,                        # Whether to print the FPS when running (can reduce performance)
                      'MIC_RATE': 48000,                           # Sampling frequency of the microphone in Hz
                      'FPS': 60,                                   # Desired refresh rate of the visualization (frames per second)
-                     'MIN_FREQUENCY': 20,                         # Frequencies below this value will be removed during audio processing
-                     'MAX_FREQUENCY': 18000,                      # Frequencies above this value will be removed during audio processing
-                     'MAX_BRIGHTNESS': 250,                       # Frequencies above this value will be removed during audio processing
+                     'MAX_BRIGHTNESS': 250,                       # Max brightness sent to LED strip
                      'N_ROLLING_HISTORY': 4,                      # Number of past audio frames to include in the rolling window
                      'MIN_VOLUME_THRESHOLD': 0.001                # No music visualization displayed if recorded audio volume below threshold
                     #'LOGARITHMIC_SCALING': True,                 # Scale frequencies logarithmically to match perceived pitch of human ear
@@ -42,6 +40,8 @@ settings = {                                                      # All settings
                                          # Other configuration 
                                        "N_PIXELS": 58,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
                                        "N_FFT_BINS": 24,                            # Number of frequency bins to use when transforming audio to frequency domain
+                                       "MIN_FREQUENCY": 20,                         # Frequencies below this value will be removed during audio processing
+                                       "MAX_FREQUENCY": 18000,                      # Frequencies above this value will be removed during audio processing
                                        "current_effect": "Energy"                   # Currently selected effect for this board, used as default when program launches
                                       },
     
@@ -114,6 +114,8 @@ settings = {                                                      # All settings
                                         # Other configuration 
                                       "N_PIXELS": 226,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
                                       "N_FFT_BINS": 24,                            # Number of frequency bins to use when transforming audio to frequency domain
+                                      "MIN_FREQUENCY": 20,                         # Frequencies below this value will be removed during audio processing
+                                      "MAX_FREQUENCY": 18000,                      # Frequencies above this value will be removed during audio processing
                                       "current_effect": "Single"                   # Currently selected effect for this board, used as default when program launches
                                      },
    
