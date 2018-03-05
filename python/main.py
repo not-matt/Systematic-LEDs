@@ -1017,13 +1017,14 @@ class GUI(QMainWindow):
             freq_label.setText(t)
             config.settings["configuration"]["MIN_FREQUENCY"] = minf
             config.settings["configuration"]["MAX_FREQUENCY"] = maxf
-            dsp.create_mel_bank()
+            signal_processers[self.board].create_mel_bank()
         def set_freq_min():
+            print("yes")
             config.settings["configuration"]["MIN_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].start()
-            dsp.create_mel_bank()
+            signal_processers[self.board].create_mel_bank()
         def set_freq_max():
             config.settings["configuration"]["MAX_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].end()
-            dsp.create_mel_bank()
+            signal_processers[self.board].create_mel_bank()
         self.board_tabs_widgets[board]["freq_slider"] = QRangeSlider()
         self.board_tabs_widgets[board]["freq_slider"].show()
         self.board_tabs_widgets[board]["freq_slider"].setMin(0)
