@@ -102,6 +102,7 @@ class Visualizer():
         self.dynamic_effects_config = {"Energy":[["blur", "Blur", "float_slider", (0.1,4.0,0.1)],
                                                  ["scale", "Scale", "float_slider", (0.4,1.0,0.05)],
                                                  ["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
+                                                 ["mirror", "Mirror", "checkbox"],
                                                  ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
                                                  ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
                                          "Wave":[["color_flash", "Flash Color", "dropdown", config.settings["colors"]],
@@ -123,6 +124,7 @@ class Visualizer():
                                                  ["mids_color", "Mids Color", "dropdown", config.settings["colors"]],
                                                  ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
                                                  ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
+                                                 ["mirror", "Mirror", "checkbox"],
                                                  ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
                                                  ["speed", "Speed", "slider", (1,5,1)]],
                                         "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
@@ -322,7 +324,6 @@ class Visualizer():
                 self.current_freq_detects[i] = False                
 
     def visualize_scroll(self, y):
-        """Effect that originates in the center and scrolls outwards"""
         y = y**4.0
         # signal_processers[self.board].gain.update(y)
         # y /= signal_processers[self.board].gain.value
@@ -360,7 +361,11 @@ class Visualizer():
         self.output[2, :speed] = lows_val[2] + mids_val[2] + high_val[2]
         # Update the LED strip
         #return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
-        return self.output
+        if config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mirror"]:
+            p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1)
+        else:
+            p = self.output
+        return p
 
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
@@ -392,7 +397,11 @@ class Visualizer():
         self.output[0, :] = gaussian_filter1d(self.output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         self.output[1, :] = gaussian_filter1d(self.output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         self.output[2, :] = gaussian_filter1d(self.output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        return self.output
+        if config.settings["devices"][self.board]["effect_opts"]["Energy"]["mirror"]:
+            p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1)
+        else:
+            p = self.output
+        return p
 
     def visualize_wavelength(self, y):
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
