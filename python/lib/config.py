@@ -15,6 +15,7 @@ settings = {                                                      # All settings
                      'USE_GUI': True,                             # Whether to display the GUI
                      'DISPLAY_FPS': False,                        # Whether to print the FPS when running (can reduce performance)
                      'MIC_RATE': 48000,                           # Sampling frequency of the microphone in Hz
+                     'MIC_NAME': 'LED', # Set input name or keep empty to use default input
                      'FPS': 60,                                   # Desired refresh rate of the visualization (frames per second)
                      'MAX_BRIGHTNESS': 250,                       # Max brightness sent to LED strip
                      'N_ROLLING_HISTORY': 4,                      # Number of past audio frames to include in the rolling window
@@ -33,14 +34,14 @@ settings = {                                                      # All settings
                       "configuration":{"TYPE": "ESP8266",                           # Device type (see below for all supported boards)
                                         # Required configuration for device. See below for all required keys per device
                                        "AUTO_DETECT": False,                         # Set this true if you're using windows hotspot to connect (see below for more info)
-                                       "MAC_ADDR": "YOUR MAC ADDRESS HERE",             # MAC address of the ESP8266. Only used if AUTO_DETECT is True
-                                       "UDP_IP": "YOUR IP HERE",                   # IP address of the ESP8266. Must match IP in ws2812_controller.ino
+                                       "MAC_ADDR": "2c-3a-e8-2f-2c-9f",             # MAC address of the ESP8266. Only used if AUTO_DETECT is True
+                                       "UDP_IP": "192.168.0.150",                   # IP address of the ESP8266. Must match IP in ws2812_controller.ino
                                        "UDP_PORT": 7778,                            # Port number used for socket communication between Python and ESP8266
-                                       "MAX_BRIGHTNESS": 250,                       # Max brightness of output (0-255) (my strip sometimes bugs out with high brightness)
+                                       "MAX_BRIGHTNESS": 255,                       # Max brightness of output (0-255) (my strip sometimes bugs out with high brightness)
                                          # Other configuration 
                                        "N_PIXELS": 300,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
                                        "N_FFT_BINS": 24,                            # Number of frequency bins to use when transforming audio to frequency domain
-                                       "MIN_FREQUENCY": 20,                         # Frequencies below this value will be removed during audio processing
+                                       "MIN_FREQUENCY": 2000,                         # Frequencies below this value will be removed during audio processing
                                        "MAX_FREQUENCY": 18000,                      # Frequencies above this value will be removed during audio processing
                                        "current_effect": "Scroll"                   # Currently selected effect for this board, used as default when program launches
                                       },
@@ -51,6 +52,7 @@ settings = {                                                      # All settings
                                                    "scale":0.9,                     # Width of effect on strip
                                                    "r_multiplier": 1.0,             # How much red
                                                    "mirror": True,                  # Reflect output down centre of strip
+                                                   "reverse": False,                # Reverse "direction" of fade (r->g->b or r<-g<-b)
                                                    "g_multiplier": 1.0,             # How much green
                                                    "b_multiplier": 1.0},            # How much blue
                                      "Wave":      {"color_wave": "Red",             # Colour of moving bit
@@ -74,6 +76,7 @@ settings = {                                                      # All settings
                                                    "decay": 0.995,                  # How quickly the colour fades away as it moves
                                                    "speed": 4,                      # Speed of scroll
                                                    "mirror": True,                  # Reflect output down centre of strip
+                                                   "reverse": False,                # Reverse "direction" of fade (r->g->b or r<-g<-b)
                                                    "r_multiplier": 1.0,             # How much red
                                                    "g_multiplier": 1.0,             # How much green
                                                    "b_multiplier": 1.0,             # How much blue
@@ -83,6 +86,10 @@ settings = {                                                      # All settings
                                                    "s_color": "White",              # Color of sparks
                                                    "mirror": True,                  # Mirror output down central axis
                                                    "flip_lr":False},                # Flip output left-right
+                                     #"Pulse":     {"color_mode": "Spectral",        # Colour gradient to display
+                                                   #"bar_length": 20,                # Length of bar
+                                                   #"bar_speed": 4,                  # Speed of bar
+                                                   #"bar_color": "White"},           # Color of bar
                                      "Single":    {"color": "Purple"},              # Static color to show
                                      "Beat":      {"color": "Red",                  # Colour of beat flash
                                                    "decay": 0.7},                   # How quickly the flash fades away
@@ -99,13 +106,12 @@ settings = {                                                      # All settings
                                      "Fade":      {"color_mode":"Spectral",         # Colour gradient to fade through
                                                    "roll_speed": 1,                 # How fast (if at all) to fade through colours
                                                    "reverse": False},               # Reverse "direction" of fade (r->g->b or r<-g<-b)
-                                     "Calibration":{"r": 100,
-                                                    "g": 100,
-                                                    "b": 100}
+                                     "Calibration":{"r": 25,
+                                                    "g": 25,
+                                                    "b": 25}
                                      }
                                   }
               },
-
 
 
     # Collection of different colours in RGB format
@@ -117,7 +123,7 @@ settings = {                                                      # All settings
               "Light blue":(1,247,161),
               "Purple":(80,5,252),
               "Pink":(255,0,178),
-              "White":(255,255,255)},
+              "White":(50,50,50)},
 
     # Multicolour gradients. Colours must be in list above
     "gradients":{"Spectral"  : ["Red", "Orange", "Yellow", "Green", "Light blue", "Blue", "Purple", "Pink"],
