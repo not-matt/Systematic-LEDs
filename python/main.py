@@ -103,6 +103,7 @@ class Visualizer():
                                                  ["scale", "Scale", "float_slider", (0.4,1.0,0.05)],
                                                  ["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
                                                  ["mirror", "Mirror", "checkbox"],
+                                                 ["reverse", "Reverse (Only on Mirror)", "checkbox"],
                                                  ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
                                                  ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
                                          "Wave":[["color_flash", "Flash Color", "dropdown", config.settings["colors"]],
@@ -125,6 +126,7 @@ class Visualizer():
                                                  ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
                                                  ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
                                                  ["mirror", "Mirror", "checkbox"],
+                                                 ["reverse", "Reverse (Only on Mirror)", "checkbox"],
                                                  ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
                                                  ["speed", "Speed", "slider", (1,5,1)]],
                                         "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
@@ -132,15 +134,16 @@ class Visualizer():
                                                  ["s_count", "Spark Amount", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//6,1)],
                                                  ["mirror", "Mirror", "checkbox"],
                                                  ["flip_lr", "Flip LR", "checkbox"]],
+                                        "Spark":[["color", "Color", "dropdown", config.settings["colors"]],
+                                                 ["s_color", "Spark Color ", "dropdown", config.settings["colors"]],
+                                                 ["s_count", "Spark Amount", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//6,1)],
+                                                 ["decay", "Flash Decay", "float_slider", (0.3,0.98,0.005)]],
                                        "Single":[["color", "Color", "dropdown", config.settings["colors"]]],
                                          "Beat":[["color", "Color", "dropdown", config.settings["colors"]],
                                                  ["decay", "Flash Decay", "float_slider", (0.3,0.98,0.005)]],
                                          "Bars":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
                                                  ["resolution", "Resolution", "slider", (1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"], 1)],
-                                                 ["roll_speed", "Roll Speed", "slider", (0,8,1)],
-                                                 ["flip_lr", "Flip LR", "checkbox"],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["reverse_roll", "Reverse Roll", "checkbox"]],
+                                                 ["roll_speed", "Roll Speed", "slider", (0,8,1)]],
                                      "Gradient":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
                                                  ["roll_speed", "Roll Speed", "slider", (0,8,1)],
                                                  ["mirror", "Mirror", "checkbox"],
@@ -361,9 +364,12 @@ class Visualizer():
         self.output[2, :speed] = lows_val[2] + mids_val[2] + high_val[2]
         # Update the LED strip
         #return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
-        if config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mirror"]:
-            p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1)
-        else:
+        if config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mirror"]: 
+            if config.settings["devices"][self.board]["effect_opts"]["Scroll"]["reverse"]:
+               p = np.concatenate((self.output[:, ::2], self.output[:, ::-2]), axis=1) 
+            else:
+               p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1) 
+        else: 
             p = self.output
         return p
 
@@ -397,9 +403,12 @@ class Visualizer():
         self.output[0, :] = gaussian_filter1d(self.output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         self.output[1, :] = gaussian_filter1d(self.output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         self.output[2, :] = gaussian_filter1d(self.output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        if config.settings["devices"][self.board]["effect_opts"]["Energy"]["mirror"]:
-            p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1)
-        else:
+        if config.settings["devices"][self.board]["effect_opts"]["Energy"]["mirror"]: 
+            if config.settings["devices"][self.board]["effect_opts"]["Energy"]["reverse"]:
+               p = np.concatenate((self.output[:, ::2], self.output[:, ::-2]), axis=1) 
+            else:
+               p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1) 
+        else: 
             p = self.output
         return p
 
@@ -578,21 +587,41 @@ class Visualizer():
             output = np.concatenate((output[:, ::-2], output[:, ::2]), axis=1)
         return output
 
+        if self.current_freq_detects["high"]:
+            output = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
+            output[0][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Spark"]["color"]][0]
+            output[1][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Spark"]["color"]][1]
+            output[2][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Spark"]["color"]][2]
+            self.power_brightness = 1.0
+            # Generate random indexes
+            self.power_indexes = random.sample(range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]), config.settings["devices"][self.board]["effect_opts"]["Power"]["s_count"])
+            #print("ye")
+        # Assign colour to the random indexes
+        for index in self.power_indexes:
+            output[0, index] = int(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"]][0]*self.power_brightness)
+            output[1, index] = int(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"]][1]*self.power_brightness)
+            output[2, index] = int(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"]][2]*self.power_brightness)
+        else:
+            output = np.copy(self.prev_output)
+            output = np.multiply(self.prev_output,config.settings["devices"][self.board]["effect_opts"]["Spark"]["decay"])
+        return outpu
     def visualize_pulse(self, y):
+        y = y**4.0
+        output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][0][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
+                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][1][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
+                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][2][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]])
         """dope ass visuals that's what"""
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_color"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_speed"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["bar_length"]
         config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
-        common_mode.update(y) # i honestly have no idea what this is but i just work with it rather than trying to figure it out
+        signal_processers[self.board].common_mode.update(y)
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
-        r = r_filt.update(y - common_mode.value) # same with this, no flippin clue
+        r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value) # same with this, no flippin clue
         r = np.array([j for i in zip(r,r) for j in i])
-        output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][0][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][1][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][2][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]])
+        return output
         
     def visualize_single(self):
         "Displays a single colour, non audio reactive"
