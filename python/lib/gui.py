@@ -30,7 +30,7 @@ class GUI(QMainWindow):
     def hideOpts(self):
         print("Bleh")
 
-    def config.settings["configuration"]["configDialogue"](self):
+    def configDialogue(self):
         self.d = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
         b1 = QPushButton("ok",self.d)
         b1.move(50,50)
@@ -46,7 +46,7 @@ class GUI(QMainWindow):
         # ======================================================= Set up toolbar
         #toolbar_hideGraphs.setShortcut('Ctrl+H')
         toolbar_hideGraphs = QAction('GUI Properties', self)
-        toolbar_hideGraphs.triggered.connect(self.config.settings["configuration"]["configDialogue"])
+        toolbar_hideGraphs.triggered.connect(configDialogue)
         toolbar_hideOpts = QAction('Hide Opts', self)
         toolbar_hideOpts.triggered.connect(self.hideOpts)
         

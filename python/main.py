@@ -20,7 +20,70 @@ if config.settings["configuration"]["USE_GUI"]:
     from PyQt5.QtCore import *
     from PyQt5.QtWidgets import *
 
-class Visualizer():
+class BoardManager():
+    """
+    Class that manages all the boards, with their respective Visualisations, GUI tabs, and DSPs
+    """
+    def __init__(self):
+        self.visualizers = {}
+        self.boards = {}
+        self.signal_processers = {}
+
+    def addBoard(self, board, config_exists=False, req_config=None, gen_config=None):
+        if not config_exists:
+            self.addConfig(board, req_config, gen_config)
+        # Initialise Visualiser
+        self.visualizers[board] = Visualizer(board)
+        # Initialise DSP
+        self.signal_processers[board] = DSP(board)
+        # Initialise Device
+        if config.settings["devices"][board]["configuration"]["TYPE"] == 'ESP8266':
+            self.boards[board] = devices.ESP8266(
+                    auto_detect=config.settings["devices"][board]["configuration"]["AUTO_DETECT"],
+                       mac_addr=config.settings["devices"][board]["configuration"]["MAC_ADDR"],
+                             ip=config.settings["devices"][board]["configuration"]["UDP_IP"],
+                           port=config.settings["devices"][board]["configuration"]["UDP_PORT"])
+        elif config.settings["devices"][board]["configuration"]["TYPE"] == 'RaspberryPi':
+            self.boards[board] = devices.RaspberryPi(
+                       n_pixels=config.settings["devices"][board]["configuration"]["N_PIXELS"],
+                            pin=config.settings["devices"][board]["configuration"]["LED_PIN"],
+                   invert_logic=config.settings["devices"][board]["configuration"]["LED_INVERT"],
+                           freq=config.settings["devices"][board]["configuration"]["LED_FREQ_HZ"],
+                            dma=config.settings["devices"][board]["configuration"]["LED_DMA"])
+        elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Fadecandy':
+            self.boards[board] = devices.FadeCandy(
+                         server=config.settings["devices"][board]["configuration"]["SERVER"])
+        elif config.settings["devices"][board]["configuration"]["TYPE"] == 'BlinkStick':
+            self.boards[board] = devices.BlinkStick()
+        elif config.settings["devices"][board]["configuration"]["TYPE"] == 'DotStar':
+            self.boards[board] = devices.DotStar()
+        elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Stripless':
+            pass
+        if config.settings["configuration"]["USE_GUI"]:
+            gui.addBoard(board)
+
+    def delBoard(self, board):
+        del self.visualizers[board]
+        del self.signal_processers[board]
+        del self.boards[board]
+
+    def addConfig(self, board, req_config, gen_config):
+        if board in self.boards:
+            raise ValueError('Device already exists under name: {}\nPlease use a different name.'.format(board))
+        config.settings["devices"][board] = {}
+        # Update missing values from defaults
+        merged_general_config = {**config.default_general_config, **gen_config}
+        # combine into one configuration dict
+        merged_config = {**req_config, **merged_general_config}
+        # Generate device config dict
+        config.settings["devices"][board]["configuration"] = {}
+        for configuration in merged_config:
+            config.settings["devices"][board]["configuration"][configuration] = merged_config[configuration]
+        # Generate device effect opts dict
+        config.settings["devices"][board]["effect_opts"] = config.default_effect_opts
+
+
+class Visualizer(BoardManager):
     def __init__(self, board):
         # Name of board this for which this visualizer instance is visualising
         self.board = board
@@ -324,19 +387,14 @@ class Visualizer():
                 self.current_freq_detects[i] = False                
 
     def visualize_scroll(self, y):
+        # Effect that scrolls colours corresponding to frequencies across the strip 
         y = y**4.0
-        # signal_processers[self.board].gain.update(y)
-        # y /= signal_processers[self.board].gain.value
-        # y *= 255.0
         n_pixels = config.settings["devices"][self.board]["configuration"]["N_PIXELS"]
         y = np.copy(interpolate(y, n_pixels // 2))
-        signal_processers[self.board].common_mode.update(y)
+        board_manager.signal_processers[self.board].common_mode.update(y)
         diff = y - self.prev_spectrum
         self.prev_spectrum = np.copy(y)
-        # split spectrum up
-        # r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
-        # g = np.abs(diff)
-        # b = signal_processers[self.board].b_filt.update(np.copy(y))
+
         y = np.clip(y, 0, 1)
         lows = y[:len(y) // 6]
         mids = y[len(y) // 6: 2 * len(y) // 5]
@@ -370,8 +428,8 @@ class Visualizer():
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
         y = np.copy(y)
-        signal_processers[self.board].gain.update(y)
-        y /= signal_processers[self.board].gain.value
+        board_manager.signal_processers[self.board].gain.update(y)
+        y /= board_manager.signal_processers[self.board].gain.value
         scale = config.settings["devices"][self.board]["effect_opts"]["Energy"]["scale"]
         # Scale by the width of the LED strip
         y *= float((config.settings["devices"][self.board]["configuration"]["N_PIXELS"] * scale) - 1)
@@ -405,13 +463,13 @@ class Visualizer():
 
     def visualize_wavelength(self, y):
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
-        signal_processers[self.board].common_mode.update(y)
+        board_manager.signal_processers[self.board].common_mode.update(y)
         diff = y - self.prev_spectrum
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
-        r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
+        r = board_manager.signal_processers[self.board].r_filt.update(y - board_manager.signal_processers[self.board].common_mode.value)
         g = np.abs(diff)
-        b = signal_processers[self.board].b_filt.update(np.copy(y))
+        b = board_manager.signal_processers[self.board].b_filt.update(np.copy(y))
         r = np.array([j for i in zip(r,r) for j in i])
         output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][0][
                                     (config.settings["devices"][self.board]["configuration"]["N_PIXELS"] if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else 0):
@@ -441,13 +499,13 @@ class Visualizer():
         #print(len(y))
         #print(y)
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
-        signal_processers[self.board].common_mode.update(y)
+        board_manager.signal_processers[self.board].common_mode.update(y)
         diff = y - self.prev_spectrum
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
-        r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
+        r = board_manager.signal_processers[self.board].r_filt.update(y - board_manager.signal_processers[self.board].common_mode.value)
         g = np.abs(diff)
-        b = signal_processers[self.board].b_filt.update(np.copy(y))
+        b = board_manager.signal_processers[self.board].b_filt.update(np.copy(y))
         r *= config.settings["devices"][self.board]["effect_opts"]["Spectrum"]["r_multiplier"]
         g *= config.settings["devices"][self.board]["effect_opts"]["Spectrum"]["g_multiplier"]
         b *= config.settings["devices"][self.board]["effect_opts"]["Spectrum"]["b_multiplier"]
@@ -504,10 +562,10 @@ class Visualizer():
     def visualize_bars(self, y):
         # Bit of fiddling with the y values
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
-        signal_processers[self.board].common_mode.update(y)
+        board_manager.signal_processers[self.board].common_mode.update(y)
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
-        r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
+        r = board_manager.signal_processers[self.board].r_filt.update(y - board_manager.signal_processers[self.board].common_mode.value)
         r = np.array([j for i in zip(r,r) for j in i])
         # Split y into [resulution] chunks and calculate the average of each
         max_values = np.array([max(i) for i in np.array_split(r, config.settings["devices"][self.board]["effect_opts"]["Bars"]["resolution"])])
@@ -540,10 +598,10 @@ class Visualizer():
         #config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]
         # Bit of fiddling with the y values
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
-        signal_processers[self.board].common_mode.update(y)
+        board_manager.signal_processers[self.board].common_mode.update(y)
         self.prev_spectrum = np.copy(y)
         # Color channel mappings
-        r = signal_processers[self.board].r_filt.update(y - signal_processers[self.board].common_mode.value)
+        r = board_manager.signal_processers[self.board].r_filt.update(y - board_manager.signal_processers[self.board].common_mode.value)
         r = np.array([j for i in zip(r,r) for j in i])
         output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][0, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r,
                            self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][1, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r,
@@ -632,7 +690,105 @@ class Visualizer():
                            [config.settings["devices"][self.board]["effect_opts"]["Calibration"]["g"] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])],
                            [config.settings["devices"][self.board]["effect_opts"]["Calibration"]["b"] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])]])
         return output
-       
+
+class DSP(BoardManager):
+    def __init__(self, board):
+        # Name of board for which this dsp instance is processing audio
+        self.board = board
+
+        # Initialise filters etc. I've no idea what most of these are for but i imagine i won't be getting rid of them soon 
+        self.fft_plot_filter = dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
+        self.mel_gain =        dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.01, alpha_rise=0.99)
+        self.mel_smoothing =   dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
+        self.gain =            dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.001, alpha_rise=0.99)
+        self.r_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.2, alpha_rise=0.99)
+        self.g_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.05, alpha_rise=0.3)
+        self.b_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.1, alpha_rise=0.5)
+        self.common_mode =     dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.99, alpha_rise=0.01)
+        self.p_filt =          dsp.ExpFilter(np.tile(1, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2)), alpha_decay=0.1, alpha_rise=0.99)
+        self.volume =          dsp.ExpFilter(config.settings["configuration"]["MIN_VOLUME_THRESHOLD"], alpha_decay=0.02, alpha_rise=0.02)
+        self.p =               np.tile(1.0, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
+        # Number of audio samples to read every time frame
+        self.samples_per_frame = int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
+        # Array containing the rolling audio sample window
+        self.y_roll = np.random.rand(config.settings["configuration"]["N_ROLLING_HISTORY"], self.samples_per_frame) / 1e16
+        self.fft_window =      np.hamming(int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])\
+                                         * config.settings["configuration"]["N_ROLLING_HISTORY"])
+
+        self.samples = None
+        self.mel_y = None
+        self.mel_x = None
+        self.create_mel_bank()
+
+    def update(self, audio_samples):
+        """ Return processed audio data
+
+        Returns mel curve, x/y data
+
+        This is called every time there is a microphone update
+
+        Returns
+        -------
+        audio_data : dict
+            Dict containinng "mel", "vol", "x", and "y"
+        """
+
+        audio_data = {}
+        # Normalize samples between 0 and 1
+        y = audio_samples / 2.0**15
+        # Construct a rolling window of audio samples
+        self.y_roll[:-1] = self.y_roll[1:]
+        self.y_roll[-1, :] = np.copy(y)
+        y_data = np.concatenate(self.y_roll, axis=0).astype(np.float32)
+        vol = np.max(np.abs(y_data))
+        # Transform audio input into the frequency domain
+        N = len(y_data)
+        N_zeros = 2**int(np.ceil(np.log2(N))) - N
+        # Pad with zeros until the next power of two
+        y_data *= self.fft_window
+        y_padded = np.pad(y_data, (0, N_zeros), mode='constant')
+        YS = np.abs(np.fft.rfft(y_padded)[:N // 2])
+        # Construct a Mel filterbank from the FFT data
+        mel = np.atleast_2d(YS).T * self.mel_y.T
+        # Scale data to values more suitable for visualization
+        mel = np.sum(mel, axis=0)
+        mel = mel**2.0
+        # Gain normalization
+        self.mel_gain.update(np.max(gaussian_filter1d(mel, sigma=1.0)))
+        mel /= self.mel_gain.value
+        mel = self.mel_smoothing.update(mel)
+        x = np.linspace(config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"], config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"], len(mel))
+        y = self.fft_plot_filter.update(mel)
+
+        audio_data["mel"] = mel
+        audio_data["vol"] = vol
+        audio_data["x"]   = x
+        audio_data["y"]   = y
+        return audio_data
+
+    def rfft(self, data, window=None):
+        window = 1.0 if window is None else window(len(data))
+        ys = np.abs(np.fft.rfft(data * window))
+        xs = np.fft.rfftfreq(len(data), 1.0 / config.settings["configuration"]["MIC_RATE"])
+        return xs, ys
+
+
+    def fft(self, data, window=None):
+        window = 1.0 if window is None else window(len(data))
+        ys = np.fft.fft(data * window)
+        xs = np.fft.fftfreq(len(data), 1.0 / config.settings["configuration"]["MIC_RATE"])
+        return xs, ys
+
+
+    def create_mel_bank(self):
+        samples = int(config.settings["configuration"]["MIC_RATE"] * config.settings["configuration"]["N_ROLLING_HISTORY"]\
+                                                   / (2.0 * config.settings["configuration"]["FPS"]))
+        self.mel_y, (_, self.mel_x) = melbank.compute_melmat(num_mel_bands=config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"],
+                                                             freq_min=config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"],
+                                                             freq_max=config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"],
+                                                             num_fft_bands=samples,
+                                                             sample_rate=config.settings["configuration"]["MIC_RATE"])
+
 class GUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -662,9 +818,9 @@ class GUI(QMainWindow):
         
         self.toolbar = self.addToolBar('top_toolbar')
         self.toolbar.setObjectName('top_toolbar')
+        self.toolbar.addAction(toolbar_deviceDialogue)
         self.toolbar.addAction(toolbar_guiDialogue)
         self.toolbar.addAction(toolbar_saveDialogue)
-        self.toolbar.addAction(toolbar_deviceDialogue)
 
         # Set up FPS and error labels
         self.statusbar = QStatusBar()
@@ -690,9 +846,7 @@ class GUI(QMainWindow):
         self.gui_widgets["Effect Options"] = []
         self.board_tabs = {}         # contains all the tabs for each board
         self.board_tabs_widgets = {} # contains all the widgets for each tab
-        for board in config.settings["devices"]:
-            # Make the tab
-            self.addBoard(board)
+
         self.main_wrapper.addWidget(self.label_boards)
         self.main_wrapper.addWidget(self.boardsTabWidget)
         #self.setLayout(self.main_wrapper)
@@ -738,31 +892,58 @@ class GUI(QMainWindow):
             event.ignore()
 
     def updateUIVisibleItems(self):
-        #print("-UPDATE-")
         for section in self.gui_widgets:
             for widgets in self.gui_widgets[section]:
                 for widget in widgets:
                     widget.setVisible(config.settings["GUI_opts"][section])
 
     def deviceDialogue(self):
+        def addBoard_to_manager():
+            general_config = {}
+            required_config = {}
+            current_device = device_type_cbox.currentText()
+            for gen_config_setting in config.device_gen_config:
+                if config.device_gen_config[gen_config_setting][2] == "textbox":
+                    general_config[gen_config_setting] = gen_widgets[gen_config_setting][1].text()
+                elif config.device_gen_config[gen_config_setting][2] == "textbox-int":
+                    general_config[gen_config_setting] = int(gen_widgets[gen_config_setting][1].text())
+                elif config.device_gen_config[gen_config_setting][2] == "checkbox":
+                    general_config[gen_config_setting] = gen_widgets[gen_config_setting][1].isChecked()
+            if config.device_req_config[current_device]:
+                for req_config_setting in config.device_req_config[current_device]:
+                    if config.device_req_config[current_device][req_config_setting][2] == "textbox":
+                        required_config[req_config_setting] = req_widgets[current_device][req_config_setting][1].text()
+                    elif config.device_req_config[current_device][req_config_setting][2] == "textbox-int":
+                        required_config[req_config_setting] = int(req_widgets[current_device][req_config_setting][1].text())
+                    elif config.device_req_config[current_device][req_config_setting][2] == "checkbox":
+                        required_config[req_config_setting] = req_widgets[current_device][req_config_setting][1].isChecked()
+            required_config["TYPE"] = current_device
+            board_name = general_config["NAME"]
+            del general_config["NAME"]
+            board_manager.addBoard(board_name, config_exists=False,
+                                               req_config=required_config,
+                                               gen_config=general_config)
+
+
         def show_hide_addBoard_interface():
             current_device = device_type_cbox.currentText()
             for device in config.device_req_config:
-                for req_config_setting in widgets[device]:
+                for req_config_setting in req_widgets[device]:
                     if req_config_setting is not "no_config":
-                        for widget in widgets[device][req_config_setting]:
+                        for widget in req_widgets[device][req_config_setting]:
                             widget.setVisible(device == current_device)
                     else:
-                        widgets[device][req_config_setting].setVisible(device == current_device)
+                        req_widgets[device][req_config_setting].setVisible(device == current_device)
 
         def validate_inputs():
             # Checks all inputs are ok, before setting "add device" to usable
             import re
             current_device = device_type_cbox.currentText()
-            valid_inputs = {}
+            req_valid_inputs = {}
+            gen_valid_inputs = {}
             styles = ["", "border: 1px solid #3be820;", "border: 1px solid red;"]
             def valid_mac(x):
-                return True if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", test.lower()) else False
+                return True if re.match("[0-9a-f]{2}([-])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", test.lower()) else False
             def valid_ip(x):
                 try:
                     pieces = x.split('.')
@@ -783,16 +964,19 @@ class GUI(QMainWindow):
                     return (((pieces[0] == "localhost") or (valid_ip(pieces[0]))) and valid_int(pieces[1])) is True
                 except:
                     return False
-            def update_box_highlight(setting, val):
-                widgets[current_device][setting][1].setStyleSheet(styles[val])
+            def update_req_box_highlight(setting, val):
+                req_widgets[current_device][setting][1].setStyleSheet(styles[val])
+            def update_gen_box_highlight(setting, val):
+                gen_widgets[setting][1].setStyleSheet(styles[val])
             def update_add_device_button():
-                value = all(valid_inputs[setting] for setting in config.device_req_config[current_device]) if config.device_req_config[current_device] else True
-                self.add_device_button.setEnabled(value)
+                req_value = all(req_valid_inputs[setting] for setting in config.device_req_config[current_device]) if config.device_req_config[current_device] else True
+                gen_value = all(gen_valid_inputs[setting] for setting in config.device_gen_config) if config.device_gen_config else True
+                self.add_device_button.setEnabled(req_value and gen_value)
             # Validate the inputs, highlight invalid boxes
             # ESP8266
             if current_device == "ESP8266":
                 for req_config_setting in config.device_req_config[current_device]:
-                    test = widgets[current_device][req_config_setting][1].text()
+                    test = req_widgets[current_device][req_config_setting][1].text()
                     # Validate MAC
                     if req_config_setting == "MAC_ADDR":
                         valid = valid_mac(test)
@@ -804,13 +988,12 @@ class GUI(QMainWindow):
                         valid = valid_int(test)
                     else:
                         valid = True
-                    valid_inputs[req_config_setting] = valid
-                    update_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
-                update_add_device_button()
+                    req_valid_inputs[req_config_setting] = valid
+                    update_req_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
             # Raspberry Pi
             elif current_device == "RaspberryPi":
                 for req_config_setting in config.device_req_config[current_device]:
-                    test = widgets[current_device][req_config_setting][1].text()
+                    test = req_widgets[current_device][req_config_setting][1].text()
                     # Validate LED Pin
                     if req_config_setting == "LED_PIN":
                         valid = valid_int(test)
@@ -822,35 +1005,32 @@ class GUI(QMainWindow):
                         valid = valid_int(test)
                     else:
                         valid = True
-                    valid_inputs[req_config_setting] = valid
-                    update_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
-                update_add_device_button()
+                    req_valid_inputs[req_config_setting] = valid
+                    update_req_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
             # Fadecandy
             elif current_device == "Fadecandy":
                 for req_config_setting in config.device_req_config[current_device]:
-                    test = widgets[current_device][req_config_setting][1].text()
+                    test = req_widgets[current_device][req_config_setting][1].text()
                     # Validate Server
                     if req_config_setting == "SERVER":
                         valid = validate_address_port(test)
                     else:
                         valid = True
-                    valid_inputs[req_config_setting] = valid
-                    update_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
-                update_add_device_button()
+                    req_valid_inputs[req_config_setting] = valid
+                    update_req_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
             # Other devices without required config
             elif not config.device_req_config[current_device]:
-                update_add_device_button()
-
-        # def lineEdit(labelText, defaultText):
-        #     wrapper = QWidget()
-        #     hLayout = QHBoxLayout()
-        #     wrapper.setLayout(hLayout)
-        #     label = QLabel(labelText)
-        #     lEdit = QLineEdit()
-        #     lEdit.setPlaceholderText(defaultText)
-        #     hLayout.addWidget(label)
-        #     hLayout.addWidget(lEdit)
-        #     return wrapper
+                pass
+            for gen_config_setting in config.device_gen_config:
+                test = gen_widgets[gen_config_setting][1].text()
+                # Validate Server
+                if gen_config_setting in ["N_PIXELS", "N_FFT_BINS", "MIN_FREQUENCY", "MAX_FREQUENCY"]:
+                    valid = valid_int(test)
+                else:
+                    valid = True
+                gen_valid_inputs[gen_config_setting] = valid
+                update_gen_box_highlight(gen_config_setting, (1 if valid else 2) if test else 0)
+            update_add_device_button()
 
         # Set up window and layout
         self.device_dialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
@@ -866,8 +1046,13 @@ class GUI(QMainWindow):
         remDeviceTab = QWidget()
         addDeviceTabLayout = QVBoxLayout()
         remDeviceTabLayout = QVBoxLayout()
-        addDeviceTabButtonLayout = QGridLayout()
+        addDeviceReqGroupBox = QGroupBox("Device Setup")
+        addDeviceGenGroupBox = QGroupBox("Configuration")
+        addDeviceTabReqButtonLayout = QGridLayout()
+        addDeviceTabGenButtonLayout = QGridLayout()
         remDeviceTabButtonLayout = QGridLayout()
+        addDeviceReqGroupBox.setLayout(addDeviceTabReqButtonLayout)
+        addDeviceGenGroupBox.setLayout(addDeviceTabGenButtonLayout)
         addDeviceTab.setLayout(addDeviceTabLayout)
         remDeviceTab.setLayout(remDeviceTabLayout)
         tabs.addTab(addDeviceTab, "Add Device")
@@ -880,14 +1065,13 @@ class GUI(QMainWindow):
         device_type_cbox.currentIndexChanged.connect(validate_inputs)
         addDeviceTabLayout.addWidget(device_type_cbox)
 
-        # Set up "Add Device" widgets
-        widgets = {}
-        addDeviceTabLayout.addLayout(addDeviceTabButtonLayout)
-        remDeviceTabLayout.addLayout(remDeviceTabButtonLayout)
+        # Set up "Add Device" required settings widgets
+        req_widgets = {}
+        addDeviceTabLayout.addWidget(addDeviceReqGroupBox)
         # if the new board has required config
         for device in config.device_req_config:
-            # Make the widgets
-            widgets[device] = {}
+            # Make the req_widgets
+            req_widgets[device] = {}
             if config.device_req_config[device]:
                 for req_config_setting in config.device_req_config[device]:
                     label = config.device_req_config[device][req_config_setting][0]
@@ -896,33 +1080,62 @@ class GUI(QMainWindow):
                     deflt = config.device_req_config[device][req_config_setting][3]
                     wLabel = QLabel(label)
                     #wGuide = QLabel(guide)
-                    if wType == "textbox":
+                    if wType in ["textbox", "textbox-int"]:
                         wEdit = QLineEdit()
                         wEdit.setPlaceholderText(deflt)
                         wEdit.textChanged.connect(validate_inputs)
                     elif wType == "checkbox":
                         wEdit = QCheckBox()
                         wEdit.setCheckState(Qt.Checked if deflt else Qt.Unchecked)
-                    widgets[device][req_config_setting] = [wLabel, wEdit]
-                # Add widgets to layout
+                    req_widgets[device][req_config_setting] = [wLabel, wEdit]
+                # Add req_widgets to layout
                 i = 0
-                for req_config in widgets[device]:
-                    addDeviceTabButtonLayout.addWidget(widgets[device][req_config][0], i, 0)
-                    addDeviceTabButtonLayout.addWidget(widgets[device][req_config][1], i, 1)
-                    #addDeviceTabButtonLayout.addWidget(widget_set[2], i+1, 0, 1, 2)
+                for req_config in req_widgets[device]:
+                    addDeviceTabReqButtonLayout.addWidget(req_widgets[device][req_config][0], i, 0)
+                    addDeviceTabReqButtonLayout.addWidget(req_widgets[device][req_config][1], i, 1)
+                    #addDeviceTabReqButtonLayout.addWidget(widget_set[2], i+1, 0, 1, 2)
                     i += 1
             else:
                 no_setup = QLabel("Device requires no additional setup here! :)")
-                widgets[device]["no_config"] = no_setup
-                addDeviceTabButtonLayout.addWidget(no_setup, 0, 0)
+                req_widgets[device]["no_config"] = no_setup
+                addDeviceTabReqButtonLayout.addWidget(no_setup, 0, 0)
 
-        # Show appropriate widgets
+        # Set up "Add Device" general settings widgets
+        gen_widgets = {}
+        addDeviceTabLayout.addWidget(addDeviceGenGroupBox)
+        for gen_config_setting in config.device_gen_config:
+            label = config.device_gen_config[gen_config_setting][0]
+            guide = config.device_gen_config[gen_config_setting][1]
+            wType = config.device_gen_config[gen_config_setting][2]
+            deflt = config.device_gen_config[gen_config_setting][3]
+            wLabel = QLabel(label)
+            #wGuide = QLabel(guide)
+            if wType in ["textbox", "textbox-int"]:
+                wEdit = QLineEdit()
+                wEdit.setPlaceholderText(deflt)
+                wEdit.textChanged.connect(validate_inputs)
+            elif wType == "checkbox":
+                wEdit = QCheckBox()
+                wEdit.setCheckState(Qt.Checked if deflt else Qt.Unchecked)
+            gen_widgets[gen_config_setting] = [wLabel, wEdit]
+        # Add gen_widgets to layout
+        i = 0
+        for req_config in gen_widgets:
+            addDeviceTabGenButtonLayout.addWidget(gen_widgets[req_config][0], i, 0)
+            addDeviceTabGenButtonLayout.addWidget(gen_widgets[req_config][1], i, 1)
+            #addDeviceTabGenButtonLayout.addWidget(widget_set[2], i+1, 0, 1, 2)
+            i += 1
+
+        # Show appropriate req_widgets
         show_hide_addBoard_interface()
 
         self.add_device_button = QPushButton("Add Device")
+        self.add_device_button.setEnabled(False)
+        self.add_device_button.clicked.connect(addBoard_to_manager)
         addDeviceTabLayout.addWidget(self.add_device_button)
 
         # Set up "Remove Device" tab
+        remDeviceTabLayout.addLayout(remDeviceTabButtonLayout)
 
         # Set up ok/cancel buttons
         self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
@@ -930,7 +1143,8 @@ class GUI(QMainWindow):
         self.buttons.rejected.connect(self.device_dialogue.reject)
         layout.addWidget(self.buttons)
         
-        # Show dialogue
+        # Set button states and show dialogue
+        validate_inputs()
         self.device_dialogue.show()
 
     def saveDialogue(self):
@@ -1037,8 +1251,8 @@ class GUI(QMainWindow):
             func.__name__ = effect
             return func
         # Where the magic happens
-        for effect in visualizers[board].effects:
-            if not effect in visualizers[board].non_reactive_effects:
+        for effect in board_manager.visualizers[board].effects:
+            if not effect in board_manager.visualizers[board].non_reactive_effects:
                 connecting_funcs[effect] = connect_generator(effect)
                 buttons[effect] = QPushButton(effect)
                 buttons[effect].clicked.connect(connecting_funcs[effect])
@@ -1068,13 +1282,13 @@ class GUI(QMainWindow):
             freq_label.setText(t)
             config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"] = minf
             config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"] = maxf
-            signal_processers[self.board].create_mel_bank()
+            board_manager.signal_processers[self.board].create_mel_bank()
         def set_freq_min():
             config.settings["devices"][board]["configuration"]["MIN_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].start()
-            signal_processers[board].create_mel_bank()
+            board_manager.signal_processers[board].create_mel_bank()
         def set_freq_max():
             config.settings["devices"][board]["configuration"]["MAX_FREQUENCY"] = self.board_tabs_widgets[board]["freq_slider"].end()
-            signal_processers[board].create_mel_bank()
+            board_manager.signal_processers[board].create_mel_bank()
         self.board_tabs_widgets[board]["freq_slider"] = QRangeSlider()
         self.board_tabs_widgets[board]["freq_slider"].show()
         self.board_tabs_widgets[board]["freq_slider"].setMin(0)
@@ -1109,7 +1323,7 @@ class GUI(QMainWindow):
         grid_layouts = {}
         self.board_tabs_widgets[board]["grid_layout_widgets"] = {}
         options = config.settings["devices"][board]["effect_opts"].keys()
-        for effect in visualizers[self.board].effects:
+        for effect in board_manager.visualizers[self.board].effects:
             # Make the tab
             self.board_tabs_widgets[board]["grid_layout_widgets"][effect] = {}
             tabs[effect] = QWidget()
@@ -1135,10 +1349,10 @@ class GUI(QMainWindow):
                     config.settings["devices"][board]["effect_opts"][effect][key] = self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].isChecked()
                 return func
             # Dynamically generate ui for settings
-            if effect in visualizers[self.board].dynamic_effects_config:
+            if effect in board_manager.visualizers[self.board].dynamic_effects_config:
                 i = 0
                 connecting_funcs[effect] = {}
-                for key, label, ui_element, *opts in visualizers[self.board].dynamic_effects_config[effect]:
+                for key, label, ui_element, *opts in board_manager.visualizers[self.board].dynamic_effects_config[effect]:
                     if opts: # neatest way  ^^^^^ i could think of to unpack and handle an unknown number of opts (if any) NOTE only works with py >=3.6
                         opts = list(opts[0])
                     if ui_element == "slider":
@@ -1187,104 +1401,6 @@ class GUI(QMainWindow):
         self.board_tabs_widgets[board]["wrapper"].addWidget(self.board_tabs_widgets[board]["freq_slider"])
         self.board_tabs_widgets[board]["wrapper"].addWidget(self.board_tabs_widgets[board]["label_options"])
         self.board_tabs_widgets[board]["wrapper"].addWidget(self.board_tabs_widgets[board]["opts_tabs"])
-
-class DSP():
-    def __init__(self, board):
-        # Name of board for which this dsp instance is processing audio
-        self.board = board
-
-        # Initialise filters etc. I've no idea what most of these are for but i imagine i won't be getting rid of them soon 
-        self.fft_plot_filter = dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
-        self.mel_gain =        dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.01, alpha_rise=0.99)
-        self.mel_smoothing =   dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
-        self.gain =            dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.001, alpha_rise=0.99)
-        self.r_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.2, alpha_rise=0.99)
-        self.g_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.05, alpha_rise=0.3)
-        self.b_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.1, alpha_rise=0.5)
-        self.common_mode =     dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.99, alpha_rise=0.01)
-        self.p_filt =          dsp.ExpFilter(np.tile(1, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2)), alpha_decay=0.1, alpha_rise=0.99)
-        self.volume =          dsp.ExpFilter(config.settings["configuration"]["MIN_VOLUME_THRESHOLD"], alpha_decay=0.02, alpha_rise=0.02)
-        self.p =               np.tile(1.0, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
-        # Number of audio samples to read every time frame
-        self.samples_per_frame = int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
-        # Array containing the rolling audio sample window
-        self.y_roll = np.random.rand(config.settings["configuration"]["N_ROLLING_HISTORY"], self.samples_per_frame) / 1e16
-        self.fft_window =      np.hamming(int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])\
-                                         * config.settings["configuration"]["N_ROLLING_HISTORY"])
-
-        self.samples = None
-        self.mel_y = None
-        self.mel_x = None
-        self.create_mel_bank()
-
-    def update(self, audio_samples):
-        """ Return processed audio data
-
-        Returns mel curve, x/y data
-
-        This is called every time there is a microphone update
-
-        Returns
-        -------
-        audio_data : dict
-            Dict containinng "mel", "vol", "x", and "y"
-        """
-
-        audio_data = {}
-        # Normalize samples between 0 and 1
-        y = audio_samples / 2.0**15
-        # Construct a rolling window of audio samples
-        self.y_roll[:-1] = self.y_roll[1:]
-        self.y_roll[-1, :] = np.copy(y)
-        y_data = np.concatenate(self.y_roll, axis=0).astype(np.float32)
-        vol = np.max(np.abs(y_data))
-        # Transform audio input into the frequency domain
-        N = len(y_data)
-        N_zeros = 2**int(np.ceil(np.log2(N))) - N
-        # Pad with zeros until the next power of two
-        y_data *= self.fft_window
-        y_padded = np.pad(y_data, (0, N_zeros), mode='constant')
-        YS = np.abs(np.fft.rfft(y_padded)[:N // 2])
-        # Construct a Mel filterbank from the FFT data
-        mel = np.atleast_2d(YS).T * self.mel_y.T
-        # Scale data to values more suitable for visualization
-        mel = np.sum(mel, axis=0)
-        mel = mel**2.0
-        # Gain normalization
-        self.mel_gain.update(np.max(gaussian_filter1d(mel, sigma=1.0)))
-        mel /= self.mel_gain.value
-        mel = self.mel_smoothing.update(mel)
-        x = np.linspace(config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"], config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"], len(mel))
-        y = self.fft_plot_filter.update(mel)
-
-        audio_data["mel"] = mel
-        audio_data["vol"] = vol
-        audio_data["x"]   = x
-        audio_data["y"]   = y
-        return audio_data
-
-    def rfft(self, data, window=None):
-        window = 1.0 if window is None else window(len(data))
-        ys = np.abs(np.fft.rfft(data * window))
-        xs = np.fft.rfftfreq(len(data), 1.0 / config.settings["configuration"]["MIC_RATE"])
-        return xs, ys
-
-
-    def fft(self, data, window=None):
-        window = 1.0 if window is None else window(len(data))
-        ys = np.fft.fft(data * window)
-        xs = np.fft.fftfreq(len(data), 1.0 / config.settings["configuration"]["MIC_RATE"])
-        return xs, ys
-
-
-    def create_mel_bank(self):
-        samples = int(config.settings["configuration"]["MIC_RATE"] * config.settings["configuration"]["N_ROLLING_HISTORY"]\
-                                                   / (2.0 * config.settings["configuration"]["FPS"]))
-        self.mel_y, (_, self.mel_x) = melbank.compute_melmat(num_mel_bands=config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"],
-                                                             freq_min=config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"],
-                                                             freq_max=config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"],
-                                                             num_fft_bands=samples,
-                                                             sample_rate=config.settings["configuration"]["MIC_RATE"])
 
 
 def update_config_dicts():
@@ -1367,21 +1483,20 @@ def interpolate(y, new_length):
 
 def microphone_update(audio_samples):
     global y_roll, prev_rms, prev_exp, prev_fps_update
-
-    # Get processed audio data for each device
-    audio_datas = {}
-    for board in boards:
-        audio_datas[board] = signal_processers[board].update(audio_samples)
-        
-    outputs = {}
     
+    audio_datas = {}        
+    outputs = {}
+    audio_input = True
+
     # Visualization for each board
-    for board in boards:
+    for board in board_manager.boards:
+        # Get processed audio data for each device
+        audio_datas[board] = board_manager.signal_processers[board].update(audio_samples)
         # Get visualization output for each board
         audio_input = audio_datas[board]["vol"] > config.settings["configuration"]["MIN_VOLUME_THRESHOLD"]
-        outputs[board] = visualizers[board].get_vis(audio_datas[board]["mel"], audio_input)
+        outputs[board] = board_manager.visualizers[board].get_vis(audio_datas[board]["mel"], audio_input)
         # Map filterbank output onto LED strip(s)
-        boards[board].show(outputs[board])
+        board_manager.boards[board].show(outputs[board])
         if config.settings["configuration"]["USE_GUI"]:
             # Plot filterbank output
             gui.board_tabs_widgets[board]["mel_curve"].setData(x=audio_datas[board]["x"], y=audio_datas[board]["y"])
@@ -1415,38 +1530,9 @@ settings = QSettings('./lib/settings.ini', QSettings.IniFormat)
 settings.setFallbacksEnabled(False)    # File only, no fallback to registry
 update_config_dicts()
 
-# Initialise board(s)
-visualizers = {}
-boards = {}
-for board in config.settings["devices"]:
-    visualizers[board] = Visualizer(board)
-    if config.settings["devices"][board]["configuration"]["TYPE"] == 'ESP8266':
-        boards[board] = devices.ESP8266(
-                auto_detect=config.settings["devices"][board]["configuration"]["AUTO_DETECT"],
-                   mac_addr=config.settings["devices"][board]["configuration"]["MAC_ADDR"],
-                         ip=config.settings["devices"][board]["configuration"]["UDP_IP"],
-                       port=config.settings["devices"][board]["configuration"]["UDP_PORT"])
-    elif config.settings["devices"][board]["configuration"]["TYPE"] == 'RaspberryPi':
-        boards[board] = devices.RaspberryPi(
-                   n_pixels=config.settings["devices"][board]["configuration"]["N_PIXELS"],
-                        pin=config.settings["devices"][board]["configuration"]["LED_PIN"],
-               invert_logic=config.settings["devices"][board]["configuration"]["LED_INVERT"],
-                       freq=config.settings["devices"][board]["configuration"]["LED_FREQ_HZ"],
-                        dma=config.settings["devices"][board]["configuration"]["LED_DMA"])
-    elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Fadecandy':
-        boards[board] = devices.FadeCandy(
-                     server=config.settings["devices"][board]["configuration"]["SERVER"])
-    elif config.settings["devices"][board]["configuration"]["TYPE"] == 'BlinkStick':
-        boards[board] = devices.BlinkStick()
-    elif config.settings["devices"][board]["configuration"]["TYPE"] == 'DotStar':
-        boards[board] = devices.DotStar()
-    elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Stripless':
-        pass
 
-# Initialise DSP
-signal_processers = {}
-for board in config.settings["devices"]:
-    signal_processers[board] = DSP(board)
+# Initialise board(s)
+board_manager = BoardManager()
 
 # Initialise GUI 
 if config.settings["configuration"]["USE_GUI"]:
@@ -1456,6 +1542,11 @@ if config.settings["configuration"]["USE_GUI"]:
     gui = GUI()
     app.processEvents()
 
+# Populate board manager with boards
+for board in config.settings["devices"]:
+    board_manager.addBoard(board, config_exists=True)
+
+# FPS 
 prev_fps_update = time.time()
 # The previous time that the frames_per_second() function was called
 _time_prev = time.time() * 1000.0
