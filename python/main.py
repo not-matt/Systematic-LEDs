@@ -102,6 +102,7 @@ class Visualizer():
         self.dynamic_effects_config = {"Energy":[["blur", "Blur", "float_slider", (0.1,4.0,0.1)],
                                                  ["scale", "Scale", "float_slider", (0.4,1.0,0.05)],
                                                  ["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
+                                                 ["mirror", "Mirror", "checkbox"],
                                                  ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
                                                  ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
                                          "Wave":[["color_flash", "Flash Color", "dropdown", config.settings["colors"]],
@@ -123,6 +124,7 @@ class Visualizer():
                                                  ["mids_color", "Mids Color", "dropdown", config.settings["colors"]],
                                                  ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
                                                  ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
+                                                 ["mirror", "Mirror", "checkbox"],
                                                  ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
                                                  ["speed", "Speed", "slider", (1,5,1)]],
                                         "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
@@ -322,7 +324,6 @@ class Visualizer():
                 self.current_freq_detects[i] = False                
 
     def visualize_scroll(self, y):
-        """Effect that originates in the center and scrolls outwards"""
         y = y**4.0
         # signal_processers[self.board].gain.update(y)
         # y /= signal_processers[self.board].gain.value
@@ -360,7 +361,11 @@ class Visualizer():
         self.output[2, :speed] = lows_val[2] + mids_val[2] + high_val[2]
         # Update the LED strip
         #return np.concatenate((self.prev_spectrum[:, ::-speed], self.prev_spectrum), axis=1)
-        return self.output
+        if config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mirror"]:
+            p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1)
+        else:
+            p = self.output
+        return p
 
     def visualize_energy(self, y):
         """Effect that expands from the center with increasing sound energy"""
@@ -392,7 +397,11 @@ class Visualizer():
         self.output[0, :] = gaussian_filter1d(self.output[0, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         self.output[1, :] = gaussian_filter1d(self.output[1, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
         self.output[2, :] = gaussian_filter1d(self.output[2, :], sigma=config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        return self.output
+        if config.settings["devices"][self.board]["effect_opts"]["Energy"]["mirror"]:
+            p = np.concatenate((self.output[:, ::-2], self.output[:, ::2]), axis=1)
+        else:
+            p = self.output
+        return p
 
     def visualize_wavelength(self, y):
         y = np.copy(interpolate(y, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
@@ -744,57 +753,93 @@ class GUI(QMainWindow):
                         for widget in widgets[device][req_config_setting]:
                             widget.setVisible(device == current_device)
                     else:
-                        # doesn't make sense i know i know
                         widgets[device][req_config_setting].setVisible(device == current_device)
 
-        def validate_input():
+        def validate_inputs():
+            # Checks all inputs are ok, before setting "add device" to usable
             import re
             current_device = device_type_cbox.currentText()
-            tests = []
-            print("testing")
+            valid_inputs = {}
+            styles = ["", "border: 1px solid #3be820;", "border: 1px solid red;"]
+            def valid_mac(x):
+                return True if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", test.lower()) else False
+            def valid_ip(x):
+                try:
+                    pieces = x.split('.')
+                    if len(pieces) != 4: return False
+                    return all(0<=int(i)<256 for i in pieces)
+                except:
+                    return False
+            def valid_int(x):
+                try:
+                    x = int(x)
+                    return x > 0
+                except:
+                    return False
+            def validate_address_port(x):
+                try:
+                    pieces = x.split(":")
+                    if len(pieces) != 2: return False
+                    return (((pieces[0] == "localhost") or (valid_ip(pieces[0]))) and valid_int(pieces[1])) is True
+                except:
+                    return False
+            def update_box_highlight(setting, val):
+                widgets[current_device][setting][1].setStyleSheet(styles[val])
+            def update_add_device_button():
+                value = all(valid_inputs[setting] for setting in config.device_req_config[current_device]) if config.device_req_config[current_device] else True
+                self.add_device_button.setEnabled(value)
+            # Validate the inputs, highlight invalid boxes
+            # ESP8266
             if current_device == "ESP8266":
                 for req_config_setting in config.device_req_config[current_device]:
                     test = widgets[current_device][req_config_setting][1].text()
+                    # Validate MAC
                     if req_config_setting == "MAC_ADDR":
-                        # Validate MAC
-                        tests.append(True if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", test.lower()) else False)
+                        valid = valid_mac(test)
+                    # Validate IP
                     elif req_config_setting == "UDP_IP":
-                        # Validate IP
-                        try:
-                            pieces = test.split('.')
-                            if len(pieces) != 4: return False
-                            tests.append(all(0<=int(self.prev_output)<256 for self.prev_output in pieces))
-                        except:
-                            tests.append(False)
+                        valid = valid_ip(test)
+                    # Validate port
                     elif req_config_setting == "UDP_PORT":
-                        # Validate port
-                        print(test)
-                        try:
-                            int(test)
-                            if test > 0:
-                                test.append(True)
-                        except:
-                            tests.append(False)
-                
-
-
-
-
-                #pass
-                
-                
-                # Validate port
+                        valid = valid_int(test)
+                    else:
+                        valid = True
+                    valid_inputs[req_config_setting] = valid
+                    update_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
+                update_add_device_button()
+            # Raspberry Pi
             elif current_device == "RaspberryPi":
-                pass
-                # Validate LED Pin
-                # Validate LED Freq
-                # Validate LED DMA
+                for req_config_setting in config.device_req_config[current_device]:
+                    test = widgets[current_device][req_config_setting][1].text()
+                    # Validate LED Pin
+                    if req_config_setting == "LED_PIN":
+                        valid = valid_int(test)
+                    # Validate LED Freq
+                    elif req_config_setting == "LED_FREQ_HZ":
+                        valid = valid_int(test)
+                    # Validate LED DMA
+                    elif req_config_setting == "LED_DMA":
+                        valid = valid_int(test)
+                    else:
+                        valid = True
+                    valid_inputs[req_config_setting] = valid
+                    update_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
+                update_add_device_button()
+            # Fadecandy
             elif current_device == "Fadecandy":
-                pass
-                # Validate server
-            elif not config.req_config_setting[current_device]:
-                pass
-            print(tests)
+                for req_config_setting in config.device_req_config[current_device]:
+                    test = widgets[current_device][req_config_setting][1].text()
+                    # Validate Server
+                    if req_config_setting == "SERVER":
+                        valid = validate_address_port(test)
+                    else:
+                        valid = True
+                    valid_inputs[req_config_setting] = valid
+                    update_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
+                update_add_device_button()
+            # Other devices without required config
+            elif not config.device_req_config[current_device]:
+                update_add_device_button()
 
         # def lineEdit(labelText, defaultText):
         #     wrapper = QWidget()
@@ -832,6 +877,7 @@ class GUI(QMainWindow):
         device_type_cbox = QComboBox()
         device_type_cbox.addItems(config.device_req_config.keys())
         device_type_cbox.currentIndexChanged.connect(show_hide_addBoard_interface)
+        device_type_cbox.currentIndexChanged.connect(validate_inputs)
         addDeviceTabLayout.addWidget(device_type_cbox)
 
         # Set up "Add Device" widgets
@@ -853,7 +899,7 @@ class GUI(QMainWindow):
                     if wType == "textbox":
                         wEdit = QLineEdit()
                         wEdit.setPlaceholderText(deflt)
-                        wEdit.textChanged.connect(validate_input)
+                        wEdit.textChanged.connect(validate_inputs)
                     elif wType == "checkbox":
                         wEdit = QCheckBox()
                         wEdit.setCheckState(Qt.Checked if deflt else Qt.Unchecked)
@@ -873,13 +919,6 @@ class GUI(QMainWindow):
         # Show appropriate widgets
         show_hide_addBoard_interface()
 
-        # self.gui_vis_checkboxes = {}
-        # for section in self.gui_widgets:
-        #     self.gui_vis_checkboxes[section] = QCheckBox(section)
-        #     self.gui_vis_checkboxes[section].setCheckState(
-        #             Qt.Checked if config.settings["GUI_opts"][section] else Qt.Unchecked)
-        #     self.gui_vis_checkboxes[section].stateChanged.connect(update_visibilty_dict)
-        #     addDeviceTabLayout.addWidget(self.gui_vis_checkboxes[section])
         self.add_device_button = QPushButton("Add Device")
         addDeviceTabLayout.addWidget(self.add_device_button)
 
@@ -891,6 +930,7 @@ class GUI(QMainWindow):
         self.buttons.rejected.connect(self.device_dialogue.reject)
         layout.addWidget(self.buttons)
         
+        # Show dialogue
         self.device_dialogue.show()
 
     def saveDialogue(self):
