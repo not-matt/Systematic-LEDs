@@ -31,18 +31,18 @@ settings = {                                                      # All settings
     # All devices and their respective settings. Indexed by name, call each one what you want.
     "devices":{"Desk Strip":{
                       "configuration":{"TYPE": "ESP8266",                           # Device type (see below for all supported boards)
-                                         # Required configuration for device. See below for all required keys per device
-                                       "AUTO_DETECT": True,                         # Set this true if you're using windows hotspot to connect (see below for more info)
-                                       "MAC_ADDR": "2c-3a-e8-2f-2c-9f",             # MAC address of the ESP8266. Only used if AUTO_DETECT is True
-                                       "UDP_IP": "192.168.1.208",                   # IP address of the ESP8266. Must match IP in ws2812_controller.ino
+                                        # Required configuration for device. See below for all required keys per device
+                                       "AUTO_DETECT": False,                         # Set this true if you're using windows hotspot to connect (see below for more info)
+                                       "MAC_ADDR": "YOUR MAC ADDRESS HERE",             # MAC address of the ESP8266. Only used if AUTO_DETECT is True
+                                       "UDP_IP": "YOUR IP HERE",                   # IP address of the ESP8266. Must match IP in ws2812_controller.ino
                                        "UDP_PORT": 7778,                            # Port number used for socket communication between Python and ESP8266
                                        "MAX_BRIGHTNESS": 250,                       # Max brightness of output (0-255) (my strip sometimes bugs out with high brightness)
                                          # Other configuration 
-                                       "N_PIXELS": 58,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
+                                       "N_PIXELS": 300,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
                                        "N_FFT_BINS": 24,                            # Number of frequency bins to use when transforming audio to frequency domain
                                        "MIN_FREQUENCY": 20,                         # Frequencies below this value will be removed during audio processing
                                        "MAX_FREQUENCY": 18000,                      # Frequencies above this value will be removed during audio processing
-                                       "current_effect": "Energy"                   # Currently selected effect for this board, used as default when program launches
+                                       "current_effect": "Scroll"                   # Currently selected effect for this board, used as default when program launches
                                       },
     
                       # Configurable options for this board's effects go in this dictionary.
@@ -50,6 +50,7 @@ settings = {                                                      # All settings
                       "effect_opts":{"Energy":    {"blur": 1,                       # Amount of blur to apply
                                                    "scale":0.9,                     # Width of effect on strip
                                                    "r_multiplier": 1.0,             # How much red
+                                                   "mirror": True,                  # Reflect output down centre of strip
                                                    "g_multiplier": 1.0,             # How much green
                                                    "b_multiplier": 1.0},            # How much blue
                                      "Wave":      {"color_wave": "Red",             # Colour of moving bit
@@ -68,10 +69,11 @@ settings = {                                                      # All settings
                                                    "blur": 3.0,                     # Amount of blur to apply
                                                    "flip_lr":False},                # Flip output left-right
                                      "Scroll":    {"lows_color": "Red",             # Colour of low frequencies
-                                                   "mids_color": "Green",             # Colour of mid frequencies
-                                                   "high_color": "Blue",             # Colour of high frequencies
+                                                   "mids_color": "Green",           # Colour of mid frequencies
+                                                   "high_color": "Blue",            # Colour of high frequencies
                                                    "decay": 0.995,                  # How quickly the colour fades away as it moves
-                                                   "speed": 1,                      # Speed of scroll
+                                                   "speed": 4,                      # Speed of scroll
+                                                   "mirror": True,                  # Reflect output down centre of strip
                                                    "r_multiplier": 1.0,             # How much red
                                                    "g_multiplier": 1.0,             # How much green
                                                    "b_multiplier": 1.0,             # How much blue
@@ -88,7 +90,6 @@ settings = {                                                      # All settings
                                                    "color_mode":"Spectral",         # Multicolour mode to use
                                                    "roll_speed":0,                  # How fast (if at all) to cycle colour colours across strip
                                                    "mirror": False,                 # Mirror down centre of strip
-                                                   #"reverse_grad": False,           # Flip (LR) gradient 
                                                    "reverse_roll": False,           # Reverse movement of gradient roll
                                                    "flip_lr":False},                # Flip output left-right
                                      "Gradient":  {"color_mode":"Spectral",         # Colour gradient to display
@@ -102,81 +103,7 @@ settings = {                                                      # All settings
                                                     "g": 100,
                                                     "b": 100}
                                      }
-                                  },
-               "Main Strip":{
-                     "configuration":{"TYPE": "ESP8266",                           # Device type (see below for all supported boards)
-                                        # Required configuration for device. See below for all required keys per device
-                                      "AUTO_DETECT": True,                         # Set this true if you're using windows hotspot to connect (see below for more info)
-                                      "MAC_ADDR": "5c-cf-7f-f0-8c-f3",             # MAC address of the ESP8266. Only used if AUTO_DETECT is True
-                                      "UDP_IP": "192.168.1.208",                   # IP address of the ESP8266. Must match IP in ws2812_controller.ino
-                                      "UDP_PORT": 7778,                            # Port number used for socket communication between Python and ESP8266
-                                      "MAX_BRIGHTNESS": 180,                       # Max brightness of output (0-255) (my strip sometimes bugs out with high brightness)
-                                        # Other configuration 
-                                      "N_PIXELS": 226,                             # Number of pixels in the LED strip (must match ESP8266 firmware)
-                                      "N_FFT_BINS": 24,                            # Number of frequency bins to use when transforming audio to frequency domain
-                                      "MIN_FREQUENCY": 20,                         # Frequencies below this value will be removed during audio processing
-                                      "MAX_FREQUENCY": 18000,                      # Frequencies above this value will be removed during audio processing
-                                      "current_effect": "Single"                   # Currently selected effect for this board, used as default when program launches
-                                     },
-   
-                     # Configurable options for this board's effects go in this dictionary.
-                     # Usage: config.settings["devices"][name]["effect_opts"][effect][option]
-                     "effect_opts":{"Energy":    {"blur": 1,                       # Amount of blur to apply
-                                                  "scale":0.9,                     # Width of effect on strip
-                                                  "r_multiplier": 1.0,             # How much red
-                                                  "g_multiplier": 1.0,             # How much green
-                                                  "b_multiplier": 1.0},            # How much blue
-                                    "Wave":      {"color_wave": "Red",             # Colour of moving bit
-                                                  "color_flash": "White",          # Colour of flashy bit
-                                                  "wipe_len":5,                    # Initial length of colour bit after beat
-                                                  "decay": 0.7,                    # How quickly the flash fades away 
-                                                  "wipe_speed":2},                 # Number of pixels added to colour bit every frame
-                                    "Spectrum":  {"r_multiplier": 1.0,             # How much red
-                                                  "g_multiplier": 1.0,             # How much green
-                                                  "b_multiplier": 1.0},            # How much blue
-                                    "Wavelength":{"roll_speed": 0,                 # How fast (if at all) to cycle colour overlay across strip
-                                                  "color_mode": "Spectral",        # Colour gradient to display
-                                                  "mirror": False,                 # Reflect output down centre of strip
-                                                  "reverse_grad": False,           # Flip (LR) gradient
-                                                  "reverse_roll": False,           # Reverse movement of gradient roll
-                                                  "blur": 3.0,                     # Amount of blur to apply
-                                                  "flip_lr":False},                # Flip output left-right
-                                    "Scroll":    {"lows_color": "Red",             # Colour of low frequencies
-                                                  "mids_color": "Green",             # Colour of mid frequencies
-                                                  "high_color": "Blue",             # Colour of high frequencies
-                                                  "decay": 0.995,                  # How quickly the colour fades away as it moves
-                                                  "speed": 1,                      # Speed of scroll
-                                                  "r_multiplier": 1.0,             # How much red
-                                                  "g_multiplier": 1.0,             # How much green
-                                                  "b_multiplier": 1.0,             # How much blue
-                                                  "blur": 0.2},                    # Amount of blur to apply
-                                    "Power":     {"color_mode": "Spectral",        # Colour gradient to display
-                                                  "s_count": 20,                   # Initial number of sparks
-                                                  "s_color": "White",              # Color of sparks
-                                                  "mirror": True,                  # Mirror output down central axis
-                                                  "flip_lr":False},                # Flip output left-right
-                                    "Single":    {"color": "Purple"},              # Static color to show
-                                    "Beat":      {"color": "Red",                  # Colour of beat flash
-                                                  "decay": 0.7},                   # How quickly the flash fades away
-                                    "Bars":      {"resolution":4,                  # Number of "bars"
-                                                  "color_mode":"Spectral",         # Multicolour mode to use
-                                                  "roll_speed":0,                  # How fast (if at all) to cycle colour colours across strip
-                                                  "mirror": False,                 # Mirror down centre of strip
-                                                  #"reverse_grad": False,           # Flip (LR) gradient 
-                                                  "reverse_roll": False,           # Reverse movement of gradient roll
-                                                  "flip_lr":False},                # Flip output left-right
-                                    "Gradient":  {"color_mode":"Spectral",         # Colour gradient to display
-                                                  "roll_speed": 0,                 # How fast (if at all) to cycle colour colours across strip
-                                                  "mirror": False,                 # Mirror gradient down central axis
-                                                  "reverse": False},               # Reverse movement of gradient
-                                    "Fade":      {"color_mode":"Spectral",         # Colour gradient to fade through
-                                                  "roll_speed": 1,                 # How fast (if at all) to fade through colours
-                                                  "reverse": False},               # Reverse "direction" of fade (r->g->b or r<-g<-b)
-                                    "Calibration":{"r": 100,
-                                                   "g": 100,
-                                                   "b": 100}
-                                    }
-                                 }
+                                  }
               },
 
 
