@@ -57,8 +57,8 @@ class Visualizer():
                                   "low":0,
                                   "mid":0,
                                   "high":0}
-        self.detection_ranges = {"beat":(0,int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.13)),
-                                 "low":(int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.15),
+        self.detection_ranges = {"beat":(0,int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.11)),
+                                 "low":(int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.13),
                                         int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.4)),
                                  "mid":(int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.4),
                                         int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.7)),
@@ -315,7 +315,7 @@ class Visualizer():
             if any(differences[j] >= self.min_percent_diff[i]\
                    and self.freq_channels[j][0] >= self.min_detect_amplitude[i]\
                             for j in range(*self.detection_ranges[i]))\
-                        and (time.time() - self.prev_freq_detects[i] > 0.1)\
+                        and (time.time() - self.prev_freq_detects[i] > 0.2)\
                         and len(self.freq_channels[0]) == self.freq_channel_history:
                 self.prev_freq_detects[i] = time.time()
                 self.current_freq_detects[i] = True
