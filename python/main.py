@@ -1372,6 +1372,14 @@ for board in config.settings["devices"]:
         boards[board] = devices.BlinkStick()
     elif config.settings["devices"][board]["configuration"]["TYPE"] == 'DotStar':
         boards[board] = devices.DotStar()
+    elif config.settings["devices"][board]["configuration"]["TYPE"] == 'sACNClient':
+        boards[board] = devices.sACNClient(
+            ip = config.settings["devices"][board]["configuration"]["IP"],
+            start_universe = config.settings["devices"][board]["configuration"]["START_UNIVERSE"],
+            start_channel = config.settings["devices"][board]["configuration"]["START_CHANNEL"],
+            universe_size = config.settings["devices"][board]["configuration"]["UNIVERSE_SIZE"],
+            channel_count = config.settings["devices"][board]["configuration"]["N_PIXELS"] * 3,
+            fps = config.settings["configuration"]["FPS"])
     elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Stripless':
         pass
 
