@@ -6,29 +6,24 @@ import lib.config as config
 
 def start_stream(callback):
 	p = pyaudio.PyAudio()
-	id=0
+	id=p.get_default_input_device_info()['index']
+	
 	frames_per_buffer = int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
 	
-	numdevices = p.get_host_api_info_by_index(0).get('deviceCount')
+	numdevices = p.get_device_count()
 	#for each audio device, determine if is an input or an output and add it to the appropriate list and dictionary
 	for i in range (0,numdevices):
-			if p.get_device_info_by_host_api_device_index(0,i).get('maxInputChannels')>0:
-					if p.get_device_info_by_host_api_device_index(0,i).get('name')==config.settings["configuration"]["MIC_NAME"]:
+			device_info = p.get_device_info_by_host_api_device_index(0,i)
+			if device_info.get('maxInputChannels')>0:
+					if device_info.get('name')==config.settings["configuration"]["MIC_NAME"]:
 						id=i
 	
-	if config.settings["configuration"]["MIC_NAME"]!="":
-		stream = p.open(format=pyaudio.paInt16,
-						channels=1,
-				   		rate=config.settings["configuration"]["MIC_RATE"],
-						input=True,
-						input_device_index = id,
-						frames_per_buffer=frames_per_buffer)
-	else:
-		stream = p.open(format=pyaudio.paInt16,
-						channels=1,
-				   		rate=config.settings["configuration"]["MIC_RATE"],
-						input=True,
-						frames_per_buffer=frames_per_buffer)
+	stream = p.open(format=pyaudio.paInt16,
+					channels=1,
+			   		rate=config.settings["configuration"]["MIC_RATE"],
+					input=True,
+					input_device_index = id,
+					frames_per_buffer=frames_per_buffer)
 		
 	overflows = 0
 	prev_ovf_time = time.time()
