@@ -61,15 +61,12 @@ class BoardManager():
             self.boards[board] = devices.Stripless()
         if config.settings["configuration"]["USE_GUI"]:
             gui.addBoard(board)
-        print(self.boards)
 
     def delBoard(self, board):
         print("deleting board {}".format(board))
-        print(self.boards)
         del self.visualizers[board]
         del self.signal_processers[board]
         del self.boards[board]
-        print(self.boards)
 
     def addConfig(self, board, req_config, gen_config):
         if board in self.boards:
@@ -386,7 +383,6 @@ class Visualizer(BoardManager):
                         and len(self.freq_channels[0]) == self.freq_channel_history:
                 self.prev_freq_detects[i] = time.time()
                 self.current_freq_detects[i] = True
-                #print(i)
             else:
                 self.current_freq_detects[i] = False                
 
