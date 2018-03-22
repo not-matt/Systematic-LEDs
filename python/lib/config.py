@@ -15,6 +15,7 @@ settings = {                                                      # All settings
                      'USE_GUI': True,                             # Whether to display the GUI
                      'DISPLAY_FPS': False,                        # Whether to print the FPS when running (can reduce performance)
                      'MIC_RATE': 48000,                           # Sampling frequency of the microphone in Hz
+                     'MIC_NAME': '',                              # Set input name or keep empty to use default input
                      'FPS': 60,                                   # Desired refresh rate of the visualization (frames per second)
                      'MAX_BRIGHTNESS': 250,                       # Max brightness sent to LED strip
                      'N_ROLLING_HISTORY': 4,                      # Number of past audio frames to include in the rolling window
