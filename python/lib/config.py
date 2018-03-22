@@ -6,7 +6,6 @@ import os
 use_defaults = {"configuration": True,                           # See notes below for detailed explanation
                 "GUI_opts": False,
                 "devices": False,
-                "default_effect_opts": True,
                 "colors": True,
                 "gradients": True}
 
