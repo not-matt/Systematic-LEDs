@@ -58,14 +58,18 @@ class BoardManager():
         elif config.settings["devices"][board]["configuration"]["TYPE"] == 'DotStar':
             self.boards[board] = devices.DotStar()
         elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Stripless':
-            pass
+            self.boards[board] = devices.Stripless()
         if config.settings["configuration"]["USE_GUI"]:
             gui.addBoard(board)
+        print(self.boards)
 
     def delBoard(self, board):
+        print("deleting board {}".format(board))
+        print(self.boards)
         del self.visualizers[board]
         del self.signal_processers[board]
         del self.boards[board]
+        print(self.boards)
 
     def addConfig(self, board, req_config, gen_config):
         if board in self.boards:
@@ -870,6 +874,17 @@ class GUI(QMainWindow):
         self.gui_widgets["Frequency Range"].append([self.board_tabs_widgets[board]["label_slider"], self.board_tabs_widgets[board]["freq_slider"]])
         self.gui_widgets["Effect Options"].append([self.board_tabs_widgets[board]["label_options"], self.board_tabs_widgets[board]["opts_tabs"]])
 
+    def delBoard(self, board):
+        idx = self.boardsTabWidget.indexOf(self.board_tabs_widgets[board]["wrapper"])
+        self.boardsTabWidget.removeTab(idx)
+        #self.gui_widgets["Graphs"].remove([self.board_tabs_widgets[board]["graph_view"]])
+        #self.gui_widgets["Reactive Effect Buttons"].remove([self.board_tabs_widgets[board]["label_reactive"], self.board_tabs_widgets[board]["reactive_button_grid_wrap"]])
+        #self.gui_widgets["Non Reactive Effect Buttons"].remove([self.board_tabs_widgets[board]["label_non_reactive"], self.board_tabs_widgets[board]["non_reactive_button_grid_wrap"]])
+        #self.gui_widgets["Frequency Range"].remove([self.board_tabs_widgets[board]["label_slider"], self.board_tabs_widgets[board]["freq_slider"]])
+        #self.gui_widgets["Effect Options"].remove([self.board_tabs_widgets[board]["label_options"], self.board_tabs_widgets[board]["opts_tabs"]])
+        #del self.board_tabs_widgets[board]
+        self.board_tabs[board].deleteLater()
+
     def closeEvent(self, event):
         # executed when the window is being closed
         quit_msg = "Are you sure you want to exit?"
@@ -923,6 +938,33 @@ class GUI(QMainWindow):
             board_manager.addBoard(board_name, config_exists=False,
                                                req_config=required_config,
                                                gen_config=general_config)
+
+        def remBoard_from_manager():
+            for board in self.to_delete:
+                board_manager.delBoard(board)
+            populate_remove_device_list()
+
+        def populate_remove_device_list():
+            self.del_widgets = {}
+            i = 0
+            for board in config.settings["devices"]:
+                # Make widgets
+                wLabel = QLabel(board)
+                wEdit = QCheckBox()
+                wEdit.setCheckState(Qt.Unchecked)
+                wEdit.stateChanged.connect(validate_rem_device_checks)
+                self.del_widgets[board] = [wLabel, wEdit]
+                # Add to layout
+                remDeviceTabButtonLayout.addWidget(self.del_widgets[board][0], i, 0)
+                remDeviceTabButtonLayout.addWidget(self.del_widgets[board][1], i, 1)
+                i += 1
+
+        def validate_rem_device_checks():
+            self.to_delete = []
+            for board in config.settings["devices"]:
+                if self.del_widgets[board][1].isChecked():
+                    self.to_delete.append(board)
+            self.rem_device_button.setEnabled(True if self.to_delete else False)
 
 
         def show_hide_addBoard_interface():
@@ -1048,11 +1090,13 @@ class GUI(QMainWindow):
         remDeviceTabLayout = QVBoxLayout()
         addDeviceReqGroupBox = QGroupBox("Device Setup")
         addDeviceGenGroupBox = QGroupBox("Configuration")
+        remDeviceGroupBox = QGroupBox("Devices")
         addDeviceTabReqButtonLayout = QGridLayout()
         addDeviceTabGenButtonLayout = QGridLayout()
         remDeviceTabButtonLayout = QGridLayout()
         addDeviceReqGroupBox.setLayout(addDeviceTabReqButtonLayout)
         addDeviceGenGroupBox.setLayout(addDeviceTabGenButtonLayout)
+        remDeviceGroupBox.setLayout(remDeviceTabButtonLayout)
         addDeviceTab.setLayout(addDeviceTabLayout)
         remDeviceTab.setLayout(remDeviceTabLayout)
         tabs.addTab(addDeviceTab, "Add Device")
@@ -1103,6 +1147,7 @@ class GUI(QMainWindow):
         # Set up "Add Device" general settings widgets
         gen_widgets = {}
         addDeviceTabLayout.addWidget(addDeviceGenGroupBox)
+        addDeviceTabLayout.addStretch(1)
         for gen_config_setting in config.device_gen_config:
             label = config.device_gen_config[gen_config_setting][0]
             guide = config.device_gen_config[gen_config_setting][1]
@@ -1135,7 +1180,15 @@ class GUI(QMainWindow):
         addDeviceTabLayout.addWidget(self.add_device_button)
 
         # Set up "Remove Device" tab
-        remDeviceTabLayout.addLayout(remDeviceTabButtonLayout)
+        remDeviceTabLayout.addWidget(remDeviceGroupBox)
+        remDeviceTabLayout.addStretch(1)
+        # Show devices available to delete
+        populate_remove_device_list()
+
+        self.rem_device_button = QPushButton("Delete Device")
+        self.rem_device_button.setEnabled(False)
+        self.rem_device_button.clicked.connect(remBoard_from_manager)
+        remDeviceTabLayout.addWidget(self.rem_device_button)
 
         # Set up ok/cancel buttons
         self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
@@ -1411,7 +1464,10 @@ def update_config_dicts():
                 try:
                     config.settings[settings_dict] = {**config.settings[settings_dict], **settings.value("settings_dict")[settings_dict]}
                 except TypeError:
+                    print("Error parsing settings dictionary {}".format(settings_dict))
                     pass
+    else:
+        print("Could not find settings.ini")
 
 def frames_per_second():
     """ Return the estimated frames per second
@@ -1529,7 +1585,6 @@ def microphone_update(audio_samples):
 settings = QSettings('./lib/settings.ini', QSettings.IniFormat)
 settings.setFallbacksEnabled(False)    # File only, no fallback to registry
 update_config_dicts()
-
 
 # Initialise board(s)
 board_manager = BoardManager()

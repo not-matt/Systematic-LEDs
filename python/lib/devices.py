@@ -287,3 +287,9 @@ class DotStar(LEDController):
         bgr = [2,1,0]
         self.led_data[0:,1:4] = pixels[bgr].T.clip(0,255)
         self.strip.show()
+
+class Stripless(LEDController):
+    def __init__(self):
+        pass
+    def show(self, pixels):
+        pass

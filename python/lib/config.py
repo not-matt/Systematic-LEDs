@@ -11,7 +11,6 @@ use_defaults = {"configuration": True,                           # See notes bel
                 "gradients": True}
 
 settings = {                                                      # All settings are stored in this dict
-
     "configuration":{  # Program configuration
                      'USE_GUI': True,                             # Whether to display the GUI
                      'DISPLAY_FPS': False,                        # Whether to print the FPS when running (can reduce performance)
