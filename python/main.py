@@ -4,9 +4,10 @@ from scipy.ndimage.filters import gaussian_filter1d
 from collections import deque
 import time
 import sys
+import pyaudio
 import numpy as np
 import lib.config  as config
-import lib.microphone as microphone
+#import lib.microphone as microphone
 import lib.dsp as dsp
 #import lib.led as led
 import lib.melbank as melbank
@@ -17,6 +18,7 @@ if config.settings["configuration"]["USE_GUI"]:
     from lib.qrangeslider import QRangeSlider
     from lib.qfloatslider import QFloatSlider
     import pyqtgraph as pg
+    from PyQt5.QtGui import QColor, QIcon
     from PyQt5.QtCore import *
     from PyQt5.QtWidgets import *
 
@@ -63,10 +65,12 @@ class BoardManager():
             gui.addBoard(board)
 
     def delBoard(self, board):
-        print("deleting board {}".format(board))
+        #print("deleting board {}".format(board))
         del self.visualizers[board]
         del self.signal_processers[board]
         del self.boards[board]
+        del config.settings["devices"][board]
+        gui.delBoard(board)
 
     def addConfig(self, board, req_config, gen_config):
         if board in self.boards:
@@ -83,6 +87,12 @@ class BoardManager():
         # Generate device effect opts dict
         config.settings["devices"][board]["effect_opts"] = config.default_effect_opts
 
+class BeatDetector():
+    def __init__(self):
+        pass
+
+    def update(audio_data):
+        pass
 
 class Visualizer(BoardManager):
     def __init__(self, board):
@@ -97,6 +107,7 @@ class Visualizer(BoardManager):
                         "Beat":self.visualize_beat,
                         "Wave":self.visualize_wave,
                         "Bars":self.visualize_bars,
+                        #"Pulse":self.visualize_pulse,
                         #"Pulse":self.visualize_pulse,
                         #"Auto":self.visualize_auto,
                         "Single":self.visualize_single,
@@ -136,86 +147,6 @@ class Visualizer(BoardManager):
                                  "low":100,
                                  "mid":50,
                                  "high":30}
-        # Configurations for dynamic ui generation. Effect options can be changed by widgets created at runtime,
-        # meaning that you don't need to worry about the user interface - it's all done for you. All you need to
-        # do is add items to this dict below.
-        #
-        # First line of code below explained (as an example):
-        #   "Energy" is the visualization we're doing options for
-        #   "blur" is the key in the options dict (config.settings["devices"][self.board]["effect_opts"]["Energy"]["blur"])
-        #   "Blur" is the string we show on the GUI next to the slider
-        #   "float_slider" is the GUI element we want to use
-        #   (0.1,4.0,0.1) is a tuple containing all the details for setting up the slider (see above)
-        #
-        # Each effect key points to a list. Each list contains lists giving config for each option.
-        # Syntax: effect:[key, label_text, ui_element, opts]
-        #   effect     - the effect which you want to change options for. MUST have a key in config.settings["devices"][self.board]["effect_opts"]
-        #   key        - the key of thing you want to be changed. MUST be in config.settings["devices"][self.board]["effect_opts"][effect], otherwise it won't work.
-        #   label      - the text displayed on the ui
-        #   ui_element - how you want the variable to be changed
-        #   opts       - options for the ui element. Must be a tuple.
-        # UI Elements + opts:
-        #   slider, (min, max, interval)                   (for integer values in a given range)
-        #   float_slider, (min, max, interval)             (for floating point values in a given range)
-        #   checkbox, ()                                   (for True/False values)
-        #   dropdown, (dict or list)                       (dict/list, example see below. Keys will be displayed in the dropdown if dict, otherwise just list items)
-        #
-        # Hope this clears things up a bit for you! GUI has never been easier..? The reason for doing this is
-        # 1 - To make it easy to add options to your effects for the user
-        # 2 - To give a consistent GUI for the user. If every options page was set out differently it would all be a mess
-        self.dynamic_effects_config = {"Energy":[["blur", "Blur", "float_slider", (0.1,4.0,0.1)],
-                                                 ["scale", "Scale", "float_slider", (0.4,1.0,0.05)],
-                                                 ["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
-                                                 ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
-                                         "Wave":[["color_flash", "Flash Color", "dropdown", config.settings["colors"]],
-                                                 ["color_wave", "Wave Color", "dropdown", config.settings["colors"]],
-                                                 ["wipe_len", "Wave Start Length", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//4,1)],
-                                                 ["wipe_speed", "Wave Speed", "slider", (1,10,1)],
-                                                 ["decay", "Flash Decay", "float_slider", (0.1,1.0,0.05)]],
-                                     "Spectrum":[["r_multiplier", "Red", "float_slider", (0.05,1.0,0.05)],
-                                                 ["g_multiplier", "Green", "float_slider", (0.05,1.0,0.05)],
-                                                 ["b_multiplier", "Blue", "float_slider", (0.05,1.0,0.05)]],
-                                   "Wavelength":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
-                                                 ["roll_speed", "Roll Speed", "slider", (0,8,1)],
-                                                 ["blur", "Blur", "float_slider", (0.1,4.0,0.1)],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["reverse_grad", "Reverse Gradient", "checkbox"],
-                                                 ["reverse_roll", "Reverse Roll", "checkbox"],
-                                                 ["flip_lr", "Flip LR", "checkbox"]],
-                                       "Scroll":[["lows_color", "Lows Color", "dropdown", config.settings["colors"]],
-                                                 ["mids_color", "Mids Color", "dropdown", config.settings["colors"]],
-                                                 ["high_color", "Highs Color", "dropdown", config.settings["colors"]],
-                                                 ["blur", "Blur", "float_slider", (0.05,4.0,0.05)],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["decay", "Decay", "float_slider", (0.97,1.0,0.0005)],
-                                                 ["speed", "Speed", "slider", (1,5,1)]],
-                                        "Power":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
-                                                 ["s_color", "Spark Color ", "dropdown", config.settings["colors"]],
-                                                 ["s_count", "Spark Amount", "slider", (0,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//6,1)],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["flip_lr", "Flip LR", "checkbox"]],
-                                       "Single":[["color", "Color", "dropdown", config.settings["colors"]]],
-                                         "Beat":[["color", "Color", "dropdown", config.settings["colors"]],
-                                                 ["decay", "Flash Decay", "float_slider", (0.3,0.98,0.005)]],
-                                         "Bars":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
-                                                 ["resolution", "Resolution", "slider", (1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"], 1)],
-                                                 ["roll_speed", "Roll Speed", "slider", (0,8,1)],
-                                                 ["flip_lr", "Flip LR", "checkbox"],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["reverse_roll", "Reverse Roll", "checkbox"]],
-                                     "Gradient":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
-                                                 ["roll_speed", "Roll Speed", "slider", (0,8,1)],
-                                                 ["mirror", "Mirror", "checkbox"],
-                                                 ["reverse", "Reverse", "checkbox"]],
-                                         "Fade":[["color_mode", "Color Mode", "dropdown", config.settings["gradients"]],
-                                                 ["roll_speed", "Fade Speed", "slider", (0,8,1)],
-                                                 ["reverse", "Reverse", "checkbox"]],
-                                  "Calibration":[["r", "Red value", "slider", (0,255,1)],
-                                                 ["g", "Green value", "slider", (0,255,1)],
-                                                 ["b", "Blue value", "slider", (0,255,1)]]
-                                       }
         # Setup for fps counter
         self.frame_counter = 0
         self.start_time = time.time()
@@ -224,116 +155,6 @@ class Visualizer(BoardManager):
         # Setup for "Power" (don't change these)
         self.power_indexes = []
         self.power_brightness = 0
-        # Setup for multicolour modes (don't mess with this either unless you want to add in your own multicolour modes)
-        # If there's a multicolour mode you would like to see, let me know on GitHub! 
-
-        #def _vect_easing_func_gen(slope=2.5, length=1):
-        #    return np.vectorize(_easing_func)
-
-        def _easing_func(x, length, slope=2.5):
-            # returns a nice eased curve with defined length and curve
-            xa = (x/length)**slope
-            return xa / (xa + (1 - (x/length))**slope)
-
-
-        def _easing_gradient_generator(colors, length):
-            """
-            returns np.array of given length that eases between specified colours
-
-            parameters:
-            colors - list, colours must be in config.settings["colors"]
-                eg. ["Red", "Orange", "Blue", "Purple"]
-            length - int, length of array to return. should be from config.settings
-                eg. config.settings["devices"]["my strip"]["configuration"]["N_PIXELS"]
-            """
-            colors = colors[::-1] # needs to be reversed, makes it easier to deal with
-            n_transitions = len(colors) - 1
-            ease_length = length // n_transitions
-            pad = length - (n_transitions * ease_length)
-            output = np.zeros((3, length))
-            ease = np.array([_easing_func(i, ease_length, slope=2.5) for i in range(ease_length)])
-            # for r,g,b
-            for i in range(3):
-                # for each transition
-                for j in range(n_transitions):
-                    # Starting ease value
-                    start_value = config.settings["colors"][colors[j]][i]
-                    # Ending ease value
-                    end_value = config.settings["colors"][colors[j+1]][i]
-                    # Difference between start and end
-                    diff = end_value - start_value
-                    # Make array of all start value
-                    base = np.empty(ease_length)
-                    base.fill(start_value)
-                    # Make array of the difference between start and end
-                    diffs = np.empty(ease_length)
-                    diffs.fill(diff)
-                    # run diffs through easing function to make smooth curve
-                    eased_diffs = diffs * ease
-                    # add transition to base values to produce curve from start to end value
-                    base += eased_diffs
-                    # append this to the output array
-                    output[i, j*ease_length:(j+1)*ease_length] = base
-            # cast to int
-            output = np.asarray(output, dtype=int)
-            # pad out the ends (bit messy but it works and looks good)
-            if pad:
-                for i in range(3):
-                    output[i, -pad:] = output[i, -pad-1]
-            return output
-
-        self.multicolor_modes = {}
-        for gradient in config.settings["gradients"]:
-            self.multicolor_modes[gradient] = _easing_gradient_generator(config.settings["gradients"][gradient],
-                                                                         config.settings["devices"][self.board]["configuration"]["N_PIXELS"])
-
-        # # chunks of colour gradients
-        # _blank_overlay = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # # used to construct rgb overlay. [0-255,255...] whole length of strip
-        
-        # _gradient_whole = [int(i*config.settings["configuration"]["MAX_BRIGHTNESS"]/(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2))\
-        #                         for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2)] +\
-        #                   [config.settings["configuration"]["MAX_BRIGHTNESS"] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2)]
-        # # also used to make bits and pieces. [0-255], 1/2 length of strip
-        # _alt_gradient_half = [int(i*config.settings["configuration"]["MAX_BRIGHTNESS"]/(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2))\
-        #                         for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2)]
-        # # used to construct rgb overlay. [0-255,255...] 1/2 length of strip
-        # _gradient_half = _gradient_whole[::2]
-        # # Spectral colour mode
-        # self.multicolor_modes["Spectral"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Spectral"][2, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2] = _gradient_half[::-1]
-        # self.multicolor_modes["Spectral"][1, :] = _gradient_half + _gradient_half[::-1]
-        # self.multicolor_modes["Spectral"][0, :] = np.flipud(self.multicolor_modes["Spectral"][2])
-        # # Dancefloor colour mode
-        # self.multicolor_modes["Dancefloor"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Dancefloor"][2, :] = _gradient_whole[::-1]
-        # self.multicolor_modes["Dancefloor"][0, :] = _gradient_whole
-        # # Brilliance colour mode
-        # self.multicolor_modes["Brilliance"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Brilliance"][2, :] = _gradient_whole[::-1]
-        # self.multicolor_modes["Brilliance"][1, :] = 255
-        # self.multicolor_modes["Brilliance"][0, :] = _gradient_whole
-        # # Jungle colour mode
-        # self.multicolor_modes["Jungle"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Jungle"][1, :] = _gradient_whole[::-1]
-        # self.multicolor_modes["Jungle"][0, :] = _gradient_whole
-        # # Sky colour mode
-        # self.multicolor_modes["Sky"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Sky"][1, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2] = _alt_gradient_half[::-1]
-        # self.multicolor_modes["Sky"][0, config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2:] = _alt_gradient_half
-        # self.multicolor_modes["Sky"][2, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]] = 255
-        # # Acid colour mode
-        # self.multicolor_modes["Acid"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Acid"][2, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2] = _alt_gradient_half[::-1]
-        # self.multicolor_modes["Acid"][1, :] = 255
-        # self.multicolor_modes["Acid"][0, config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2:] = _alt_gradient_half
-        # # Ocean colour mode
-        # self.multicolor_modes["Ocean"] = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        # self.multicolor_modes["Ocean"][1, :] = _gradient_whole
-        # self.multicolor_modes["Ocean"][2, :] = _gradient_whole[::-1]
-        for i in self.multicolor_modes:
-            self.multicolor_modes[i] = np.concatenate((self.multicolor_modes[i][:, ::-1],
-                                                       self.multicolor_modes[i]), axis=1)
 
     def get_vis(self, y, audio_input):
         self.update_freq_channels(y)
@@ -384,7 +205,7 @@ class Visualizer(BoardManager):
                 self.prev_freq_detects[i] = time.time()
                 self.current_freq_detects[i] = True
             else:
-                self.current_freq_detects[i] = False                
+                self.current_freq_detects[i] = False
 
     def visualize_scroll(self, y):
         # Effect that scrolls colours corresponding to frequencies across the strip 
@@ -405,9 +226,9 @@ class Visualizer(BoardManager):
         high_max = float(np.max(high))#*config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_multiplier"])
         # indexes of max values
         # map to colour gradient
-        lows_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_color"]]) * lows_max).astype(int)
-        mids_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_color"]]) * mids_max).astype(int)
-        high_val = (np.array(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_color"]]) * high_max).astype(int)
+        lows_val = (np.array(colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Scroll"]["lows_color"])) * lows_max).astype(int)
+        mids_val = (np.array(colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Scroll"]["mids_color"])) * mids_max).astype(int)
+        high_val = (np.array(colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Scroll"]["high_color"])) * high_max).astype(int)
         # Scrolling effect window
         speed = config.settings["devices"][self.board]["effect_opts"]["Scroll"]["speed"]
         self.output[:, speed:] = self.output[:, :-speed]
@@ -471,18 +292,18 @@ class Visualizer(BoardManager):
         g = np.abs(diff)
         b = board_manager.signal_processers[self.board].b_filt.update(np.copy(y))
         r = np.array([j for i in zip(r,r) for j in i])
-        output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][0][
+        output = np.array([colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][0][
                                     (config.settings["devices"][self.board]["configuration"]["N_PIXELS"] if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else 0):
                                     (None if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else config.settings["devices"][self.board]["configuration"]["N_PIXELS"]):]*r,
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][1][
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][1][
                                     (config.settings["devices"][self.board]["configuration"]["N_PIXELS"] if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else 0):
                                     (None if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else config.settings["devices"][self.board]["configuration"]["N_PIXELS"]):]*r,
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][2][
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]][2][
                                     (config.settings["devices"][self.board]["configuration"]["N_PIXELS"] if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else 0):
                                     (None if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_grad"] else config.settings["devices"][self.board]["configuration"]["N_PIXELS"]):]*r])
         #self.prev_spectrum = y
-        self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]] = np.roll(
-                    self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]],
+        colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]] = np.roll(
+                    colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["color_mode"]],
                     config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["roll_speed"]*(-1 if config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["reverse_roll"] else 1),
                     axis=1)
         output[0] = gaussian_filter1d(output[0], sigma=config.settings["devices"][self.board]["effect_opts"]["Wavelength"]["blur"])
@@ -525,9 +346,9 @@ class Visualizer(BoardManager):
         """Effect that flashes to the beat with scrolling coloured bits"""
         if self.current_freq_detects["beat"]:
             output = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-            output[0][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_flash"]][0]
-            output[1][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_flash"]][1]
-            output[2][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_flash"]][2]
+            output[0][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_flash"])[0]
+            output[1][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_flash"])[1]
+            output[2][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_flash"])[2]
             self.wave_wipe_count = config.settings["devices"][self.board]["effect_opts"]["Wave"]["wipe_len"]
         else:
             output = np.copy(self.prev_output)
@@ -535,12 +356,12 @@ class Visualizer(BoardManager):
             #    output[i] = np.hsplit(self.prev_output[i],2)[0]
             output = np.multiply(self.prev_output,config.settings["devices"][self.board]["effect_opts"]["Wave"]["decay"])
             for i in range(self.wave_wipe_count):
-                output[0][i]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"]][0]
-                output[0][-i]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"]][0]
-                output[1][i]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"]][1]
-                output[1][-i]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"]][1]
-                output[2][i]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"]][2]
-                output[2][-i]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"]][2]
+                output[0][i]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"])[0]
+                output[0][-i]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"])[0]
+                output[1][i]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"])[1]
+                output[1][-i]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"])[1]
+                output[2][i]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"])[2]
+                output[2][-i]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Wave"]["color_wave"])[2]
             #output = np.concatenate([output,np.fliplr(output)], axis=1)
             if self.wave_wipe_count > config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2:
                 self.wave_wipe_count = config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//2
@@ -551,9 +372,9 @@ class Visualizer(BoardManager):
         """Effect that flashes to the beat"""
         if self.current_freq_detects["beat"]:
             output = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-            output[0][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Beat"]["color"]][0]
-            output[1][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Beat"]["color"]][1]
-            output[2][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Beat"]["color"]][2]
+            output[0][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Beat"]["color"])[0]
+            output[1][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Beat"]["color"])[1]
+            output[2][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Beat"]["color"])[2]
         else:
             output = np.copy(self.prev_output)
             output = np.multiply(self.prev_output,config.settings["devices"][self.board]["effect_opts"]["Beat"]["decay"])
@@ -573,7 +394,7 @@ class Visualizer(BoardManager):
         color_sets = []
         for i in range(config.settings["devices"][self.board]["effect_opts"]["Bars"]["resolution"]):
             # [r,g,b] values from a multicolour gradient array at [resulution] equally spaced intervals
-            color_sets.append([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Bars"]["color_mode"]]\
+            color_sets.append([colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Bars"]["color_mode"]]\
                               [j][i*(config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//config.settings["devices"][self.board]["effect_opts"]["Bars"]["resolution"])] for j in range(3)])
         output = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
         chunks = np.array_split(output[0], config.settings["devices"][self.board]["effect_opts"]["Bars"]["resolution"])
@@ -584,8 +405,8 @@ class Visualizer(BoardManager):
             for j in range(3):
                 output[j][n:n+m] = color_sets[i][j]*max_values[i]
             n += m
-        self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Bars"]["color_mode"]] = np.roll(
-                    self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Bars"]["color_mode"]],
+        colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Bars"]["color_mode"]] = np.roll(
+                    colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Bars"]["color_mode"]],
                     config.settings["devices"][self.board]["effect_opts"]["Bars"]["roll_speed"]*(-1 if config.settings["devices"][self.board]["effect_opts"]["Bars"]["reverse_roll"] else 1),
                     axis=1)
         if config.settings["devices"][self.board]["effect_opts"]["Bars"]["flip_lr"]:
@@ -603,9 +424,9 @@ class Visualizer(BoardManager):
         # Color channel mappings
         r = board_manager.signal_processers[self.board].r_filt.update(y - board_manager.signal_processers[self.board].common_mode.value)
         r = np.array([j for i in zip(r,r) for j in i])
-        output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][0, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r,
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][1, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r,
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][2, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r])
+        output = np.array([colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][0, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r,
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][1, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r,
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][2, :config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]*r])
         # if there's a high (eg clap):
         if self.current_freq_detects["high"]:
             self.power_brightness = 1.0
@@ -614,9 +435,9 @@ class Visualizer(BoardManager):
             #print("ye")
         # Assign colour to the random indexes
         for index in self.power_indexes:
-            output[0, index] = int(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"]][0]*self.power_brightness)
-            output[1, index] = int(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"]][1]*self.power_brightness)
-            output[2, index] = int(config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"]][2]*self.power_brightness)
+            output[0, index] = int(colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"])[0]*self.power_brightness)
+            output[1, index] = int(colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"])[1]*self.power_brightness)
+            output[2, index] = int(colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Power"]["s_color"])[2]*self.power_brightness)
         # Remove some of the indexes for next time
         self.power_indexes = [i for i in self.power_indexes if i not in random.sample(self.power_indexes, len(self.power_indexes)//4)]
         if len(self.power_indexes) <= 4:
@@ -627,9 +448,9 @@ class Visualizer(BoardManager):
         # Calculate length of bass bar based on max bass frequency volume and length of strip
         strip_len = int((config.settings["devices"][self.board]["configuration"]["N_PIXELS"]//3)*max(y[:int(config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]*0.2)]))
         # Add the bass bars into the output. Colour proportional to length
-        output[0][:strip_len] = self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][0][strip_len]
-        output[1][:strip_len] = self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][1][strip_len]
-        output[2][:strip_len] = self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][2][strip_len]
+        output[0][:strip_len] = colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][0][strip_len]
+        output[1][:strip_len] = colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][1][strip_len]
+        output[2][:strip_len] = colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Power"]["color_mode"]][2][strip_len]
         if config.settings["devices"][self.board]["effect_opts"]["Power"]["flip_lr"]:
             output = np.fliplr(output)
         if config.settings["devices"][self.board]["effect_opts"]["Power"]["mirror"]:
@@ -648,25 +469,25 @@ class Visualizer(BoardManager):
         # Color channel mappings
         r = r_filt.update(y - common_mode.value) # same with this, no flippin clue
         r = np.array([j for i in zip(r,r) for j in i])
-        output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][0][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][1][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][2][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]])
+        output = np.array([colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][0][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][1][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Pulse"]["color_mode"]][2][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]])
         
     def visualize_single(self):
         "Displays a single colour, non audio reactive"
         output = np.zeros((3,config.settings["devices"][self.board]["configuration"]["N_PIXELS"]))
-        output[0][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Single"]["color"]][0]
-        output[1][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Single"]["color"]][1]
-        output[2][:]=config.settings["colors"][config.settings["devices"][self.board]["effect_opts"]["Single"]["color"]][2]
+        output[0][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Single"]["color"])[0]
+        output[1][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Single"]["color"])[1]
+        output[2][:]=colour_manager.colour(config.settings["devices"][self.board]["effect_opts"]["Single"]["color"])[2]
         return output
 
     def visualize_gradient(self):
         "Displays a multicolour gradient, non audio reactive"
-        output = np.array([self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]][0][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]][1][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]][2][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]])
-        self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]] = np.roll(
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]],
+        output = np.array([colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]][0][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]][1][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]],
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]][2][:config.settings["devices"][self.board]["configuration"]["N_PIXELS"]]])
+        colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]] = np.roll(
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Gradient"]["color_mode"]],
                            config.settings["devices"][self.board]["effect_opts"]["Gradient"]["roll_speed"]*(-1 if config.settings["devices"][self.board]["effect_opts"]["Gradient"]["reverse"] else 1),
                            axis=1)
         if config.settings["devices"][self.board]["effect_opts"]["Gradient"]["mirror"]:
@@ -675,11 +496,11 @@ class Visualizer(BoardManager):
 
     def visualize_fade(self):
         "Fades through a multicolour gradient, non audio reactive"
-        output = np.array([[self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]][0][0] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])],
-                           [self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]][1][0] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])],
-                           [self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]][2][0] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])]])
-        self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]] = np.roll(
-                           self.multicolor_modes[config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]],
+        output = np.array([[colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]][0][0] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])],
+                           [colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]][1][0] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])],
+                           [colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]][2][0] for i in range(config.settings["devices"][self.board]["configuration"]["N_PIXELS"])]])
+        colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]] = np.roll(
+                           colour_manager.full_gradients[self.board][config.settings["devices"][self.board]["effect_opts"]["Fade"]["color_mode"]],
                            config.settings["devices"][self.board]["effect_opts"]["Fade"]["roll_speed"]*(-1 if config.settings["devices"][self.board]["effect_opts"]["Fade"]["reverse"] else 1),
                            axis=1)
         return output
@@ -695,7 +516,6 @@ class DSP(BoardManager):
     def __init__(self, board):
         # Name of board for which this dsp instance is processing audio
         self.board = board
-
         # Initialise filters etc. I've no idea what most of these are for but i imagine i won't be getting rid of them soon 
         self.fft_plot_filter = dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
         self.mel_gain =        dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.01, alpha_rise=0.99)
@@ -709,10 +529,10 @@ class DSP(BoardManager):
         self.volume =          dsp.ExpFilter(config.settings["configuration"]["MIN_VOLUME_THRESHOLD"], alpha_decay=0.02, alpha_rise=0.02)
         self.p =               np.tile(1.0, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
         # Number of audio samples to read every time frame
-        self.samples_per_frame = int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
+        self.samples_per_frame = int(config.settings["mic_config"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
         # Array containing the rolling audio sample window
         self.y_roll = np.random.rand(config.settings["configuration"]["N_ROLLING_HISTORY"], self.samples_per_frame) / 1e16
-        self.fft_window =      np.hamming(int(config.settings["configuration"]["MIC_RATE"] / config.settings["configuration"]["FPS"])\
+        self.fft_window =      np.hamming(int(config.settings["mic_config"]["MIC_RATE"] / config.settings["configuration"]["FPS"])\
                                          * config.settings["configuration"]["N_ROLLING_HISTORY"])
 
         self.samples = None
@@ -722,17 +542,13 @@ class DSP(BoardManager):
 
     def update(self, audio_samples):
         """ Return processed audio data
-
         Returns mel curve, x/y data
-
         This is called every time there is a microphone update
-
         Returns
         -------
         audio_data : dict
             Dict containinng "mel", "vol", "x", and "y"
         """
-
         audio_data = {}
         # Normalize samples between 0 and 1
         y = audio_samples / 2.0**15
@@ -769,27 +585,304 @@ class DSP(BoardManager):
     def rfft(self, data, window=None):
         window = 1.0 if window is None else window(len(data))
         ys = np.abs(np.fft.rfft(data * window))
-        xs = np.fft.rfftfreq(len(data), 1.0 / config.settings["configuration"]["MIC_RATE"])
+        xs = np.fft.rfftfreq(len(data), 1.0 / config.settings["mic_config"]["MIC_RATE"])
         return xs, ys
-
 
     def fft(self, data, window=None):
         window = 1.0 if window is None else window(len(data))
         ys = np.fft.fft(data * window)
-        xs = np.fft.fftfreq(len(data), 1.0 / config.settings["configuration"]["MIC_RATE"])
+        xs = np.fft.fftfreq(len(data), 1.0 / config.settings["mic_config"]["MIC_RATE"])
         return xs, ys
 
-
     def create_mel_bank(self):
-        samples = int(config.settings["configuration"]["MIC_RATE"] * config.settings["configuration"]["N_ROLLING_HISTORY"]\
+        samples = int(config.settings["mic_config"]["MIC_RATE"] * config.settings["configuration"]["N_ROLLING_HISTORY"]\
                                                    / (2.0 * config.settings["configuration"]["FPS"]))
         self.mel_y, (_, self.mel_x) = melbank.compute_melmat(num_mel_bands=config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"],
                                                              freq_min=config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"],
                                                              freq_max=config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"],
                                                              num_fft_bands=samples,
-                                                             sample_rate=config.settings["configuration"]["MIC_RATE"])
+                                                             sample_rate=config.settings["mic_config"]["MIC_RATE"])
+
+class ColourManager():
+    """
+    Controls all colours and gradients, both user set and default
+    Colours and gradients are stored in two dicts, one for defaults and one for user set
+    Format for colours:   "Red":(255,0,0)
+    Format for gradients: "Ocean":[(0, 255, 0), (0, 247, 161), (0, 0, 255)]
+    """
+    def __init__(self):
+        self.colours_storage = QSettings('./lib/colours.ini', QSettings.IniFormat)
+        self.gradients_storage = QSettings('./lib/gradients.ini', QSettings.IniFormat)
+        self.colours_storage.setFallbacksEnabled(False)
+        self.gradients_storage.setFallbacksEnabled(False)
+        self.effects_using_colours = []
+        self.effects_using_gradients = []
+        # load user set colours and gradients
+        self.loadFromINI(self.colours_storage, "colours")
+        self.loadFromINI(self.gradients_storage, "gradients")
+        # default colours and gradients
+        self.loadDefaultColours()
+        self.loadDefaultGradients()
+        self.buildGradients()
+        # find and save which effects have settings for colours or gradients
+        for board in config.settings["devices"]:
+            for effect in config.dynamic_effects_config:
+                for setting in config.dynamic_effects_config[effect]:
+                    if setting[2] == "dropdown":
+                        if setting[3] == "colours":
+                            self.effects_using_colours.append((board, effect, setting[0]))
+                        elif setting[3] == "gradients":
+                            self.effects_using_gradients.append((board, effect, setting[0]))
+
+    def buildGradients(self):
+        # generate full gradients for each device
+        self.full_gradients = {}
+        for board in config.settings["devices"]:
+            self.full_gradients[board] = {}
+            for i in ["user", "default"]:
+                for gradient in config.colour_manager[i+"_gradients"]:
+                    self.full_gradients[board][gradient] = self._easing_gradient_generator(config.colour_manager[i+"_gradients"][gradient],
+                                                                                           config.settings["devices"][board]["configuration"]["N_PIXELS"])
+                    self.full_gradients[board][gradient] = np.concatenate((self.full_gradients[board][gradient][:, ::-1],
+                                                                           self.full_gradients[board][gradient]), axis=1)
+
+    def colour(self, colour):
+        # returns the values of a given colour. use this function to get colour values.
+        if colour in config.colour_manager["user_colours"]:
+            return config.colour_manager["user_colours"][colour]
+        elif colour in config.colour_manager["default_colours"]:
+            return config.colour_manager["default_colours"][colour]
+        else:
+            print("colour {} has not been defined".format(colour))
+            return (0,0,0)
+
+    def getColours(self, group):
+        # "user" returns user colours
+        # "default" returns default colours
+        # "all" returns a list of both
+        if group == "user":
+            return config.colour_manager["user_colours"]
+        elif group == "default":
+            return config.colour_manager["default_colours"]
+        elif group == "all":
+            return {**config.colour_manager["user_colours"], **config.colour_manager["default_colours"]}
+
+    def getGradients(self, group):
+        if group == "user":
+            return config.colour_manager["user_gradients"]
+        elif group == "default":
+            return config.colour_manager["default_gradients"]
+        elif group == "all":
+            return {**config.colour_manager["user_gradients"], **config.colour_manager["default_gradients"]}
+
+    def _easing_gradient_generator(self, colors, length):
+        """
+        returns np.array of given length that eases between specified colours
+
+        parameters:
+        colors - list, colours must be in config.colour_manager["colours"]
+            eg. ["Red", "Orange", "Blue", "Purple"]
+        length - int, length of array to return. should be from config.settings
+            eg. config.settings["devices"]["my strip"]["configuration"]["N_PIXELS"]
+        """
+        def _easing_func(x, length, slope=2.5):
+            # returns a nice eased curve with defined length and curve
+            xa = (x/length)**slope
+            return xa / (xa + (1 - (x/length))**slope)
+        colors = colors[::-1] # needs to be reversed, makes it easier to deal with
+        n_transitions = len(colors) - 1
+        ease_length = length // n_transitions
+        pad = length - (n_transitions * ease_length)
+        output = np.zeros((3, length))
+        ease = np.array([_easing_func(i, ease_length, slope=2.5) for i in range(ease_length)])
+        # for r,g,b
+        for i in range(3):
+            # for each transition
+            for j in range(n_transitions):
+                # Starting ease value
+                start_value = colors[j][i]
+                # Ending ease value
+                end_value = colors[j+1][i]
+                # Difference between start and end
+                diff = end_value - start_value
+                # Make array of all start value
+                base = np.empty(ease_length)
+                base.fill(start_value)
+                # Make array of the difference between start and end
+                diffs = np.empty(ease_length)
+                diffs.fill(diff)
+                # run diffs through easing function to make smooth curve
+                eased_diffs = diffs * ease
+                # add transition to base values to produce curve from start to end value
+                base += eased_diffs
+                # append this to the output array
+                output[i, j*ease_length:(j+1)*ease_length] = base
+        # cast to int
+        output = np.asarray(output, dtype=int)
+        # pad out the ends (bit messy but it works and looks good)
+        if pad:
+            for i in range(3):
+                output[i, -pad:] = output[i, -pad-1]
+        return output
+
+    def loadFromINI(self, settings, toLoad, overwrite=True):
+        # loads colours or gradients from INI save file
+        # toLoad: "colours" or "gradients"
+        # settings is the QSettings object
+        # overwrite kwarg determines if duplicates are overwritten from file or not.
+        storage = settings.value(toLoad)
+        if storage:
+            try:
+                config.colour_manager["user_"+toLoad] = {**config.colour_manager["user_"+toLoad], **settings.value(toLoad)} if overwrite else\
+                                                {**settings.value(toLoad), **config.colour_manager["user_"+toLoad]}
+            except TypeError:
+                print("Error parsing {} from file: {}".format(toLoad, storage))
+                pass
+        else:
+            print("No user {} found".format(toLoad))
+
+    def addColour(self, group, colour_name, colour_value):
+        # can be used to add a new colour, or modify an existing value
+        assert(group in ["user", "default"]), "invalic group: {}".format(group)
+        assert(colour_name not in self.getColours("all")), "Colour {} already exists".format(colour_name)
+        assert(type(colour_value) == tuple), "Colour_value {} not tuple format".format(colour_value)
+        config.colour_manager[group+"_colours"][colour_name] = colour_value
+
+    def editColour(self, group, old_name, colour_value, new_name=None):
+        # changes the name and/or value of a colour
+        assert(group in ["user", "default"]), "Invalic group: {}".format(group)
+        assert(old_name in self.getColours("all")), "Colour {} does not exist".format(old_name)
+        assert(type(colour_value) == tuple), "Colour_value {} not tuple format".format(colour_value)
+        if group == "default":
+            assert(not new_name), "Not allowed to edit default colour names"
+        if new_name:
+            self.delColour(group, old_name)
+            old_name = new_name
+        config.colour_manager[group+"_colours"][old_name] = colour_value
+
+    def delColour(self, group, colour_name):
+        # delete a saved colour.
+        assert(group in ["user", "default"]), "Invalic group: {}".format(group)
+        assert(group in ["user"]), "Deleting default colours not allowed"
+        del config.colour_manager[group+"_colours"][colour_name]
+        self.removeReferences("colour", colour_name)
+
+    def addGradient(self, gradient_name, gradient_colours):
+        # can be used to add a new gradient, or modify an existing one
+        config.colour_manager["user_gradients"][gradient_name] = gradient_colours
+
+    def delGradient(self, gradient_name):
+        # delete a saved gradient
+        del config.colour_manager["user_gradients"][gradient_name]
+
+    def loadDefaultColours(self):
+        # Loads default colours.
+        config.colour_manager["default_colours"] = config.default_colours.copy()
+
+    def loadDefaultGradients(self):
+        # Loads default gradients.
+        config.colour_manager["default_gradients"] = config.default_gradients
+
+    def saveColours(self):
+        self.colours_storage.setValue("colours", config.colour_manager["user_colours"])
+        self.colours_storage.sync()
+
+    def saveGradients(self):
+        self.gradients_storage.setValue("gradients", config.colour_manager["user_gradients"])
+        self.gradients_storage.sync()
+
+    def removeReferences(self, to_remove, name, new_name=None):
+        # cleans settings of a colour/gradient
+        # eg if "red" is deleted, all usages of "red" will be changed to "black"
+        # to_remove: "colour" or "gradient"
+        # name: name of thing to remove references of
+        # new_name: optional, change name to something else
+        null_colour = "Black"
+        null_gradient = "Spectral"
+        if to_remove == "colour":
+            if new_name in colour_manager.getColours("all"):
+                null_colour = new_name
+        elif to_remove == "gradient":
+            if new_name in colour_manager.getGradients("all"):
+                null_gradient = new_name
+        if to_remove == "colour":
+            for effect in self.effects_using_colours:
+                if config.settings["devices"][effect[0]]["effect_opts"][effect[1]][effect[2]] == name:
+                    print(effect, "set to", null_colour)
+                    config.settings["devices"][effect[0]]["effect_opts"][effect[1]][effect[2]] = null_colour
+        elif to_remove == "gradient":
+            for effect in self.effects_using_gradients:
+                if config.settings["devices"][effect[0]]["effect_opts"][effect[1]][effect[2]] == name:
+                    config.settings["devices"][effect[0]]["effect_opts"][effect[1]][effect[2]] = null_gradient
+
+
+class Microphone():
+    """Controls the audio input, allowing device selection and streaming"""
+    def __init__(self, callback_func):
+        # in this class, "device" is used to refer to the audio device, not "device" in the context of the led strips
+        self.callback_func = callback_func
+        self.numdevices = py_audio.get_device_count()
+        self.default_device_id = py_audio.get_default_input_device_info()['index']
+        self.devices = []
+
+        #for each audio device, add to list of devices
+        for i in range(0,self.numdevices):
+            device_info = py_audio.get_device_info_by_host_api_device_index(0,i)
+            if device_info["maxInputChannels"] > 1:
+                self.devices.append(device_info)
+
+        if not "MIC_ID" in config.settings["mic_config"]:
+            self.setDevice(self.default_device_id)
+        else:
+            self.setDevice(config.settings["mic_config"]["MIC_ID"])
+
+    def getDevices(self):
+        return self.devices
+
+    def setDevice(self, device_id):
+        # set device to stream from by the id of the device
+        if not device_id in range(0,self.numdevices):
+            raise ValueError("No device with id {}".format(device_id))
+        self.device_id = self.devices[device_id]["index"]
+        self.device_name = self.devices[device_id]["name"]
+        self.device_rate = int(self.devices[device_id]["defaultSampleRate"])
+        self.frames_per_buffer = self.device_rate // config.settings["configuration"]["FPS"]
+
+        config.settings["mic_config"]["MIC_ID"] = self.device_id
+        config.settings["mic_config"]["MIC_NAME"] = self.device_name
+        config.settings["mic_config"]["MIC_RATE"] = self.device_rate
+
+    def startStream(self):
+        self.stream = py_audio.open(format = pyaudio.paInt16,
+                                    channels = 1,
+                                    rate = self.device_rate,
+                                    input = True,
+                                    input_device_index = self.device_id,
+                                    frames_per_buffer = self.frames_per_buffer)
+            
+        # overflows = 0
+        # prev_ovf_time = time.time()
+        while True:
+            try:
+                y = np.fromstring(self.stream.read(self.frames_per_buffer), dtype=np.int16)
+                y = y.astype(np.float32)
+                self.callback_func(y)
+            except IOError:
+                pass
+                # overflows += 1
+                # if time.time() > prev_ovf_time + 1:
+                #     prev_ovf_time = time.time()
+                #     if config.settings["configuration"]["USE_GUI"]:
+                #         gui.label_error.setText('Audio buffer has overflowed {} times'.format(overflows))
+                #     else:
+                #         print('Audio buffer has overflowed {} times'.format(overflows))
+
+    def stopStream(self):
+        self.stream.stop_stream()
+        self.stream.close()
 
 class GUI(QMainWindow):
+    """The graphical interface of the application"""
     def __init__(self):
         super().__init__()
         self.initMainWindow()
@@ -800,9 +893,11 @@ class GUI(QMainWindow):
         self.setWindowTitle("Visualization")
         # Initial window size/pos last saved if available
         settings.beginGroup("MainWindow")
-        if not settings.value("geometry") == None:
+        if settings.value("geometry"):
             self.restoreGeometry(settings.value("geometry"))
-        if not settings.value("state") == None:
+        else:
+            self.setGeometry(100,100,500,300)
+        if settings.value("state"):
             self.restoreState(settings.value("state"))
         settings.endGroup()
         self.main_wrapper = QVBoxLayout()
@@ -811,6 +906,10 @@ class GUI(QMainWindow):
         #toolbar_guiDialogue.setShortcut('Ctrl+H')
         toolbar_deviceDialogue = QAction('LED Strip Manager', self)
         toolbar_deviceDialogue.triggered.connect(self.deviceDialogue)
+        toolbar_micDialogue = QAction('Microphone Setup', self)
+        toolbar_micDialogue.triggered.connect(self.micDialogue)
+        toolbar_colourDialogue = QAction('Colour Control', self)
+        toolbar_colourDialogue.triggered.connect(self.colourDialogue)
         toolbar_guiDialogue = QAction('GUI Properties', self)
         toolbar_guiDialogue.triggered.connect(self.guiDialogue)
         toolbar_saveDialogue = QAction('Save Settings', self)
@@ -819,6 +918,8 @@ class GUI(QMainWindow):
         self.toolbar = self.addToolBar('top_toolbar')
         self.toolbar.setObjectName('top_toolbar')
         self.toolbar.addAction(toolbar_deviceDialogue)
+        self.toolbar.addAction(toolbar_micDialogue)
+        self.toolbar.addAction(toolbar_colourDialogue)
         self.toolbar.addAction(toolbar_guiDialogue)
         self.toolbar.addAction(toolbar_saveDialogue)
 
@@ -834,27 +935,55 @@ class GUI(QMainWindow):
         self.statusbar.addPermanentWidget(self.label_latency)
         self.statusbar.addPermanentWidget(self.label_fps)
 
-        # Set up board tabs
+        # Set up board tabs widget
         self.label_boards = QLabel("LED Strips")
         self.boardsTabWidget = QTabWidget()
         # Dynamically set up boards tabs
-        self.gui_widgets = {}        # contains references to ares of gui for visibility settings
+        self.gui_widgets = {}        # contains references to areas of gui for visibility settings
         self.gui_widgets["Graphs"] = []
         self.gui_widgets["Reactive Effect Buttons"] = []
         self.gui_widgets["Non Reactive Effect Buttons"] = []
         self.gui_widgets["Frequency Range"] = []
         self.gui_widgets["Effect Options"] = []
-        self.board_tabs = {}         # contains all the tabs for each board
+        self.board_tabs = {}         # contains all the tabs, one for each board
         self.board_tabs_widgets = {} # contains all the widgets for each tab
 
         self.main_wrapper.addWidget(self.label_boards)
         self.main_wrapper.addWidget(self.boardsTabWidget)
         #self.setLayout(self.main_wrapper)
 
+        # Set up setupHelper
+        self.initSetupHelper()
+
         # Set wrapper as main widget
         self.setCentralWidget(QWidget(self))
         self.centralWidget().setLayout(self.main_wrapper)
         self.show()
+
+    def initSetupHelper(self):
+        helpstring = """
+Looks like you need to connect an LED strip!\n\n
+1: Open the 'LED Strip Manager' on the toolbar above\n
+2: Choose the type of device (eg ESP8266) from the dropdown menu\n
+3: Fill in the boxes with connection and settings info\n
+4: Add the device\n
+5: Party time!\n\n
+If you have any questions, feel free to open an issue on the GitHub page.
+"""
+        self.setupHelper = QWidget()
+        self.setupHelperLayout = QVBoxLayout()
+        self.setupHelper.setLayout(self.setupHelperLayout)
+        self.setupHelperText = QLabel(helpstring)
+        self.setupHelperText.setWordWrap(True)
+        self.setupHelperLayout.addWidget(self.setupHelperText)
+        self.setupHelperLayout.addStretch()
+
+    def showSetupHelper(self):
+        self.boardsTabWidget.addTab(self.setupHelper, "Setup Helper")
+
+    def hideSetupHelper(self):
+        idx = self.boardsTabWidget.indexOf(self.setupHelper)
+        self.boardsTabWidget.removeTab(idx)
 
     def addBoard(self, board):
         self.board_tabs_widgets[board] = {}
@@ -869,9 +998,11 @@ class GUI(QMainWindow):
         self.gui_widgets["Non Reactive Effect Buttons"].append([self.board_tabs_widgets[board]["label_non_reactive"], self.board_tabs_widgets[board]["non_reactive_button_grid_wrap"]])
         self.gui_widgets["Frequency Range"].append([self.board_tabs_widgets[board]["label_slider"], self.board_tabs_widgets[board]["freq_slider"]])
         self.gui_widgets["Effect Options"].append([self.board_tabs_widgets[board]["label_options"], self.board_tabs_widgets[board]["opts_tabs"]])
+        self.updateUIVisibleItems()
+
 
     def delBoard(self, board):
-        idx = self.boardsTabWidget.indexOf(self.board_tabs_widgets[board]["wrapper"])
+        idx = self.boardsTabWidget.indexOf(self.board_tabs[board])
         self.boardsTabWidget.removeTab(idx)
         #self.gui_widgets["Graphs"].remove([self.board_tabs_widgets[board]["graph_view"]])
         #self.gui_widgets["Reactive Effect Buttons"].remove([self.board_tabs_widgets[board]["label_reactive"], self.board_tabs_widgets[board]["reactive_button_grid_wrap"]])
@@ -880,11 +1011,12 @@ class GUI(QMainWindow):
         #self.gui_widgets["Effect Options"].remove([self.board_tabs_widgets[board]["label_options"], self.board_tabs_widgets[board]["opts_tabs"]])
         #del self.board_tabs_widgets[board]
         self.board_tabs[board].deleteLater()
+        self.updateUIVisibleItems()
 
     def closeEvent(self, event):
         # executed when the window is being closed
         quit_msg = "Are you sure you want to exit?"
-        reply = QMessageBox.question(self, 'Message', 
+        reply = QMessageBox.question(self, 'Exit', 
                          quit_msg, QMessageBox.Yes, QMessageBox.No)
         if reply == QMessageBox.Yes:
             # Save window state
@@ -896,6 +1028,8 @@ class GUI(QMainWindow):
             settings.setValue("settings_dict", config.settings)
             # save and close
             settings.sync()
+            colour_manager.saveColours()
+            colour_manager.saveGradients()
             event.accept()
             sys.exit(0)
             
@@ -907,6 +1041,241 @@ class GUI(QMainWindow):
             for widgets in self.gui_widgets[section]:
                 for widget in widgets:
                     widget.setVisible(config.settings["GUI_opts"][section])
+        if len(config.settings["devices"]) == 0:
+            self.showSetupHelper()
+        else:
+            self.hideSetupHelper()
+
+    def colourDialogue(self):
+        import re
+
+        def cleanColourGrid():
+            # cleanup old colour widgets referring to ones that no longer exist
+            for widget in self.colourDialogueWidgets:
+                widget.deleteLater()
+
+        def updateColourGrid():
+            def delFuncGenerator(name, group):
+                def func():
+                    colour_manager.delColour(group, name)
+                    cleanColourGrid()
+                    gui.updateColourDropdowns()
+                    updateColourGrid()
+                func.__name__ = name
+                return func
+
+            def editFuncGenerator(name, group):
+                def func():
+                    value = colour_manager.colour(name)
+                    addColourDialogue(group=group, name=name, value=value, edit=True)
+                    cleanColourGrid()
+                    gui.updateColourDropdowns()
+                    updateColourGrid()
+                func.__name__ = name
+                return func
+
+            self.colourDialogueWidgets = []
+            self.colourDialogueGridEditFuncs = {}
+            self.colourDialogueGridDeleteFuncs = {}
+            del_enabled = {"user": True, "default": False}
+            
+            for i in ["user", "default"]:
+                colours = colour_manager.getColours(i)
+                count = 0
+                for colour in colours:
+                    self.colourDialogueGridEditFuncs[colour] = editFuncGenerator(colour, i)
+                    self.colourDialogueGridDeleteFuncs[colour] = delFuncGenerator(colour, i)
+                    label = QLabel(colour)
+                    colourBox = QWidget()
+                    delButton = QPushButton("")
+                    delButton.setIcon(QIcon('./lib/bin.png'))
+                    delButton.setIconSize(QSize(14,14))
+                    delButton.clicked.connect(self.colourDialogueGridDeleteFuncs[colour])
+                    delButton.setEnabled(del_enabled[i])
+                    editButton = QPushButton("")
+                    editButton.setIcon(QIcon('./lib/edit.png'))
+                    editButton.clicked.connect(self.colourDialogueGridEditFuncs[colour])
+                    editButton.setIconSize(QSize(14,14))
+                    p = colourBox.palette()
+                    p.setColor(colourBox.backgroundRole(), QColor(*colours[colour]))
+                    colourBox.setPalette(p)
+                    colourBox.setAutoFillBackground(True)
+                    self.pallettes[i]["grid"].setColumnStretch(0,1)
+                    self.pallettes[i]["grid"].setColumnStretch(1,1)
+                    self.pallettes[i]["grid"].addWidget(label,count,0)
+                    self.pallettes[i]["grid"].addWidget(colourBox,count,1)
+                    self.pallettes[i]["grid"].addWidget(editButton,count,2)
+                    self.pallettes[i]["grid"].addWidget(delButton,count,3)
+                    self.colourDialogueWidgets.extend([label, colourBox, editButton, delButton])
+                    count += 1
+
+        def restoreDefaultColours():
+            colour_manager.loadDefaultColours()
+            cleanColourGrid()
+            gui.updateColourDropdowns()
+            updateColourGrid()
+
+        def addColourDialogue(name=None, value=None, edit=False, group="user"):
+            self.initial_value = value
+            def addColour():
+                rgb = self.addColourPreviewBoxPalette.color(self.addColourPreviewBox.backgroundRole()).getRgb()
+                if edit:
+                    colour_manager.editColour(group, name, rgb, new_name=(self.addColourEditName.text() if group=="user" else None))
+                else:
+                    colour_manager.addColour(group, self.addColourEditName.text(), rgb)
+                cleanColourGrid()
+                gui.updateColourDropdowns()
+                updateColourGrid()
+                self.addColourDialogue.accept()
+
+            def cancelChanges():
+                setPreviewColour(QColor(*self.initial_value if self.initial_value else (255,255,255)))
+
+            def acceptChanges():
+                self.initial_value = self.addColourPreviewBoxPalette.color(self.addColourPreviewBox.backgroundRole()).getRgb()
+                setPreviewColour(QColor(*self.initial_value if self.initial_value else (255,255,255)))
+
+            def showColourDialogue():
+                self.colourEditDialogue = QColorDialog(QColor(*self.initial_value if self.initial_value else (255,255,255)))
+                self.colourEditDialogue.setWindowModality(Qt.ApplicationModal)
+                self.colourEditDialogue.show()
+                self.colourEditDialogue.accepted.connect(acceptChanges)
+                self.colourEditDialogue.rejected.connect(cancelChanges)
+                self.colourEditDialogue.currentColorChanged.connect(setPreviewColour)
+
+            def setPreviewColour(colour):
+                self.addColourPreviewBoxPalette.setColor(self.addColourPreviewBox.backgroundRole(), colour)
+                self.addColourPreviewBox.setPalette(self.addColourPreviewBoxPalette)
+                if edit:
+                    colour_manager.editColour(group, name, colour.getRgb(), new_name=(self.addColourEditName.text() if group=="user" else None))
+
+            def validColourName(name):
+                styles = ["", "border: 1px solid #3be820;", "border: 1px solid red;"]
+                if name:
+                    if re.match("\w+$", name):
+                        self.addColourEditName.setStyleSheet(styles[1])
+                        buttons.button(QDialogButtonBox.Ok).setEnabled(True)
+                    else:
+                        self.addColourEditName.setStyleSheet(styles[2])
+                        buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+                else:
+                    self.addColourEditName.setStyleSheet(styles[0])
+                    buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+
+            # Set up window and layout
+            self.addColourDialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
+            self.addColourDialogue.setWindowTitle("{} Colour".format("Edit" if edit else "Add"))
+            self.addColourDialogue.setWindowModality(Qt.ApplicationModal)
+            layout = QGridLayout()
+            self.addColourDialogue.setLayout(layout)
+    
+            # Colour name input
+            self.addColourLabelName = QLabel("Name")
+            self.addColourEditName = QLineEdit()
+            self.addColourEditName.setEnabled(True if group == "user" else False)
+            self.addColourEditName.textChanged.connect(validColourName)
+            layout.addWidget(self.addColourLabelName, 0, 0)
+            layout.addWidget(self.addColourEditName, 0, 1, 1, 2)
+
+            # Colour value input
+            self.addColourLabelColour = QLabel("Colour")
+            self.addColourPreviewBox = QWidget()
+            self.addColourPreviewBoxPalette = self.addColourPreviewBox.palette()
+            self.addColourPreviewBoxPalette.setColor(self.addColourPreviewBox.backgroundRole(), QColor(*self.initial_value if self.initial_value else (255,255,255)))
+            self.addColourPreviewBox.setPalette(self.addColourPreviewBoxPalette)
+            self.addColourPreviewBox.setAutoFillBackground(True)
+            self.colourEdit = QPushButton("Edit Colour")
+            self.colourEdit.clicked.connect(showColourDialogue)
+            layout.addWidget(self.addColourLabelColour, 1, 0)
+            layout.addWidget(self.addColourPreviewBox, 1, 1)
+            layout.addWidget(self.colourEdit, 1, 2)
+    
+            # Set up dialogue buttons
+            buttons = QDialogButtonBox(Qt.Horizontal, self)
+            buttons.addButton(QDialogButtonBox.Ok)
+            buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+            buttons.accepted.connect(addColour)
+            layout.addWidget(buttons, 2, 0, 1, 3)
+            layout.setColumnStretch(1,1)
+            if name:
+                self.addColourEditName.setText(name)
+            self.addColourDialogue.show()
+
+        # Set up window and layout
+        self.colour_dialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
+        self.colour_dialogue.setWindowTitle("Colour Control")
+        self.colour_dialogue.setWindowModality(Qt.ApplicationModal)
+        layout = QVBoxLayout()
+        self.colour_dialogue.setLayout(layout)
+
+        # Set up colour display
+        self.pallettes = {}
+        self.pallettes["user"] = {}
+        self.pallettes["default"] = {}
+        self.pallettes["buttons"] = {}
+        for i in ["user", "default"]:
+            self.pallettes[i]["groupbox"] = QGroupBox()
+            self.pallettes[i]["wrapper_layout"] = QVBoxLayout()
+            self.pallettes[i]["grid"] = QGridLayout()
+            self.pallettes[i]["groupbox"].setLayout(self.pallettes[i]["wrapper_layout"])
+            self.pallettes[i]["wrapper_layout"].addLayout(self.pallettes[i]["grid"], stretch=1)
+        restore = QPushButton("Reset Defaults")
+        add = QPushButton("Add Colour")
+        restore.clicked.connect(restoreDefaultColours)
+        add.clicked.connect(addColourDialogue)
+        self.pallettes["buttons"]["wrap"] = QWidget()
+        self.pallettes["buttons"]["layout"] = QHBoxLayout()
+        self.pallettes["buttons"]["layout"].addStretch()
+        self.pallettes["buttons"]["layout"].addWidget(restore)
+        self.pallettes["buttons"]["layout"].addWidget(add)
+        self.pallettes["buttons"]["wrap"].setLayout(self.pallettes["buttons"]["layout"])
+        self.pallettes["user"]["groupbox"].setTitle("Custom colours")
+        self.pallettes["default"]["groupbox"].setTitle("Default colours")
+        layout.addWidget(self.pallettes["default"]["groupbox"])
+        layout.addWidget(self.pallettes["user"]["groupbox"])
+        layout.addWidget(self.pallettes["buttons"]["wrap"])
+
+        # Load and show colours
+        updateColourGrid()
+
+        # Set up dialogue buttons
+        self.buttons = QDialogButtonBox(Qt.Horizontal, self)
+        self.buttons.addButton(QDialogButtonBox.Ok)
+        self.buttons.accepted.connect(self.colour_dialogue.accept)
+        layout.addWidget(self.buttons)
+        self.colour_dialogue.show()
+
+    def micDialogue(self):
+        def set_mic():
+            microphone.setDevice(mic_button_group.checkedId())
+            microphone.startStream()
+
+        # Set up window and layout
+        self.mic_dialogue = QDialog(None, Qt.WindowSystemMenuHint | Qt.WindowCloseButtonHint)
+        self.mic_dialogue.setWindowTitle("Mic Setup")
+        self.mic_dialogue.setWindowModality(Qt.ApplicationModal)
+        layout = QVBoxLayout()
+        self.mic_dialogue.setLayout(layout)
+
+        # Set up buttons for each mic
+        mic_button_group = QButtonGroup(self.mic_dialogue)
+        mic_buttons = {}
+        mics = microphone.getDevices()
+        for mic in mics:
+            mic_id = mic["index"]
+            mic_buttons[mic_id] = QRadioButton(mic["name"])
+            mic_button_group.addButton(mic_buttons[mic_id])
+            mic_button_group.setId(mic_buttons[mic_id], mic_id)
+            mic_buttons[mic_id].clicked.connect(set_mic)
+            if config.settings["mic_config"]["MIC_ID"] == mic_id:
+                mic_buttons[mic_id].setChecked(Qt.Checked)
+            layout.addWidget(mic_buttons[mic_id])
+
+        # Set up ok/cancel buttons
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
+        self.buttons.accepted.connect(self.mic_dialogue.accept)
+        layout.addWidget(self.buttons)
+        self.mic_dialogue.show()
 
     def deviceDialogue(self):
         def addBoard_to_manager():
@@ -938,6 +1307,9 @@ class GUI(QMainWindow):
         def remBoard_from_manager():
             for board in self.to_delete:
                 board_manager.delBoard(board)
+            for widget in self.del_widgets:
+                self.del_widgets[widget][0].deleteLater()
+                self.del_widgets[widget][1].deleteLater()
             populate_remove_device_list()
 
         def populate_remove_device_list():
@@ -1235,7 +1607,24 @@ class GUI(QMainWindow):
             layout.addWidget(self.gui_vis_checkboxes[section])
         layout.addWidget(self.buttons)
         self.gui_dialogue.show()
-        
+
+    def updateColourDropdowns(self):
+        colours = colour_manager.getColours("all")
+        # dd, dropdown
+        for dd in self.colour_dropdowns:
+            current = config.settings["devices"][dd[0]]["effect_opts"][dd[1]][dd[2]]
+            self.board_tabs_widgets[dd[0]]["grid_layout_widgets"][dd[1]][dd[2]].clear()
+            self.board_tabs_widgets[dd[0]]["grid_layout_widgets"][dd[1]][dd[2]].addItems(colours)
+            self.board_tabs_widgets[dd[0]]["grid_layout_widgets"][dd[1]][dd[2]].setCurrentIndex(list(colours).index(current))
+
+    def updateGradientDropdowns(self):
+        gradients = colour_manager.getGradients()
+        for dd in self.gradient_dropdowns:
+            current = config.settings["devices"][dd[0]]["effect_opts"][dd[1]][dd[2]]
+            self.board_tabs_widgets[dd[0]]["grid_layout_widgets"][dd[1]][dd[2]].clear()
+            self.board_tabs_widgets[dd[0]]["grid_layout_widgets"][dd[1]][dd[2]].addItems(gradients)
+            self.board_tabs_widgets[dd[0]]["grid_layout_widgets"][dd[1]][dd[2]].setCurrentIndex(list(gradients).index(current))
+
     def initBoardUI(self, board):
         self.board = board
         # Set up wrapping layout
@@ -1325,8 +1714,8 @@ class GUI(QMainWindow):
         self.board_tabs_widgets[board]["label_slider"] = QLabel("Frequency Range")
         # Frequency slider
         def freq_slider_change(tick):
-            minf = self.board_tabs_widgets[board]["freq_slider"].tickValue(0)**2.0 * (config.settings["configuration"]["MIC_RATE"] / 2.0)
-            maxf = self.board_tabs_widgets[board]["freq_slider"].tickValue(1)**2.0 * (config.settings["configuration"]["MIC_RATE"] / 2.0)
+            minf = self.board_tabs_widgets[board]["freq_slider"].tickValue(0)**2.0 * (config.settings["mic_config"]["MIC_RATE"] / 2.0)
+            maxf = self.board_tabs_widgets[board]["freq_slider"].tickValue(1)**2.0 * (config.settings["mic_config"]["MIC_RATE"] / 2.0)
             t = 'Frequency range: {:.0f} - {:.0f} Hz'.format(minf, maxf)
             freq_label.setText(t)
             config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"] = minf
@@ -1371,6 +1760,10 @@ class GUI(QMainWindow):
         tabs = {}
         grid_layouts = {}
         self.board_tabs_widgets[board]["grid_layout_widgets"] = {}
+        # easy access to dropdowns of colours or gradients. they often need updating.
+        # contains tuples (board, effect, key) to allow access in self.board_tabs_widgets
+        self.colour_dropdowns = []
+        self.gradient_dropdowns = []
         options = config.settings["devices"][board]["effect_opts"].keys()
         for effect in board_manager.visualizers[self.board].effects:
             # Make the tab
@@ -1398,33 +1791,37 @@ class GUI(QMainWindow):
                     config.settings["devices"][board]["effect_opts"][effect][key] = self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].isChecked()
                 return func
             # Dynamically generate ui for settings
-            if effect in board_manager.visualizers[self.board].dynamic_effects_config:
+            if effect in config.dynamic_effects_config:
                 i = 0
                 connecting_funcs[effect] = {}
-                for key, label, ui_element, *opts in board_manager.visualizers[self.board].dynamic_effects_config[effect]:
+                for key, label, ui_element, *opts in config.dynamic_effects_config[effect]:
                     if opts: # neatest way  ^^^^^ i could think of to unpack and handle an unknown number of opts (if any) NOTE only works with py >=3.6
-                        opts = list(opts[0])
+                        if opts[0] not in ["colours", "gradients"]:
+                            opts = list(opts[0])
                     if ui_element == "slider":
                         connecting_funcs[effect][key] = gen_slider_valuechanger(effect, key)
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key] = QSlider(Qt.Horizontal)
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].setMinimum(opts[0])
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].setMaximum(opts[1])
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].setValue(config.settings["devices"][board]["effect_opts"][effect][key])
-                        self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].valueChanged.connect(
-                                connecting_funcs[effect][key])
+                        self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].valueChanged.connect(connecting_funcs[effect][key])
                     elif ui_element == "float_slider":
                         connecting_funcs[effect][key] = gen_float_slider_valuechanger(effect, key)
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key] = QFloatSlider(*opts, config.settings["devices"][board]["effect_opts"][effect][key])
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].setValue(config.settings["devices"][board]["effect_opts"][effect][key])
-                        self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].valueChanged.connect(
-                                connecting_funcs[effect][key])
+                        self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].valueChanged.connect(connecting_funcs[effect][key])
                     elif ui_element == "dropdown":
+                        if opts[0] == "colours":
+                            self.colour_dropdowns.append((board, effect, key))
+                            opts = list(colour_manager.getColours("all"))
+                        elif opts[0] == "gradients":
+                            self.gradient_dropdowns.append((board, effect, key))
+                            opts = list(colour_manager.getGradients("all"))
                         connecting_funcs[effect][key] = gen_combobox_valuechanger(effect, key)
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key] = QComboBox()
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].addItems(opts)
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].setCurrentIndex(opts.index(config.settings["devices"][board]["effect_opts"][effect][key]))
-                        self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].currentIndexChanged.connect(
-                                connecting_funcs[effect][key])
+                        self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key].currentTextChanged.connect(connecting_funcs[effect][key])
                     elif ui_element == "checkbox":
                         connecting_funcs[effect][key] = gen_checkbox_valuechanger(effect, key)
                         self.board_tabs_widgets[board]["grid_layout_widgets"][effect][key] = QCheckBox()
@@ -1464,6 +1861,11 @@ def update_config_dicts():
                     pass
     else:
         print("Could not find settings.ini")
+
+def save_config_dicts():
+    # saves config.settings
+    settings.setValue("settings_dict", config.settings)
+    settings.sync()
 
 def frames_per_second():
     """ Return the estimated frames per second
@@ -1585,6 +1987,9 @@ update_config_dicts()
 # Initialise board(s)
 board_manager = BoardManager()
 
+# Initialise Colour Manager
+colour_manager = ColourManager()
+
 # Initialise GUI 
 if config.settings["configuration"]["USE_GUI"]:
     # Create GUI window
@@ -1604,7 +2009,13 @@ _time_prev = time.time() * 1000.0
 # The low-pass filter used to estimate frames-per-second
 _fps = dsp.ExpFilter(val=config.settings["configuration"]["FPS"], alpha_decay=0.2, alpha_rise=0.2)
 
-# Initialize LEDs
-# led.update()
 # Start listening to live audio stream
-microphone.start_stream(microphone_update)
+py_audio = pyaudio.PyAudio()
+microphone = Microphone(microphone_update)
+try:
+    microphone.startStream()
+finally:
+    save_config_dicts()
+    colour_manager.saveColours()
+    colour_manager.saveGradients()
+    py_audio.terminate()
