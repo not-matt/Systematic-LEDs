@@ -13,14 +13,13 @@ import lib.dsp as dsp
 import lib.melbank as melbank
 import lib.devices as devices
 import random
-from PyQt5.QtCore import QSettings
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import *
 if config.settings["configuration"]["USE_GUI"]:
     from lib.qrangeslider import QRangeSlider
     from lib.qfloatslider import QFloatSlider
     import pyqtgraph as pg
     from PyQt5.QtGui import QColor, QIcon
-    from PyQt5.QtCore import *
-    from PyQt5.QtWidgets import *
 
 class BoardManager():
     """
@@ -1974,8 +1973,8 @@ def microphone_update(audio_samples):
         app.processEvents()
 
     # Left in just in case prople dont use the gui
-    elif vol < config.settings["configuration"]["MIN_VOLUME_THRESHOLD"]:
-        print("No audio input. Volume below threshold. Volume: {}".format(vol))
+    elif audio_datas[board]["vol"] < config.settings["configuration"]["MIN_VOLUME_THRESHOLD"]:
+        print("No audio input. Volume below threshold. Volume: {}".format(audio_datas[board]["vol"]))
     if config.settings["configuration"]["DISPLAY_FPS"]:
         print('FPS {:.0f} / {:.0f}'.format(fps, config.settings["configuration"]["FPS"]))
 

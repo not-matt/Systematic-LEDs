@@ -255,7 +255,7 @@ class RaspberryPi(LEDController):
         rgb = np.bitwise_or(np.bitwise_or(r, g), b)
         # Update the pixels
         for i in range(n_pixels):
-            self.strip._led_data[i] = rgb[i]
+            self.strip.setPixelColor(i, neopixel.Color(rgb[i]))
         self.strip.show()
 
 
