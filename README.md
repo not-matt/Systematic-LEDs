@@ -8,4 +8,4 @@ Grab some LED strips, and you can set this up yourself. Follow the simple steps 
 
 ## Installation
 
-[For now, please refer to these instructions regarding installation](https://github.com/scottlawsonbc/audio-reactive-led-strip)
+Check out [this tutorial](https://www.youtube.com/watch?v=W4jaAgjfvG8) made by Matt Muller.
