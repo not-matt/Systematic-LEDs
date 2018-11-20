@@ -44,6 +44,12 @@ class BoardManager():
                        mac_addr=config.settings["devices"][board]["configuration"]["MAC_ADDR"],
                              ip=config.settings["devices"][board]["configuration"]["UDP_IP"],
                            port=config.settings["devices"][board]["configuration"]["UDP_PORT"])
+        if config.settings["devices"][board]["configuration"]["TYPE"] == 'PxMatrix':
+            self.boards[board] = devices.PxMatrix(
+                    auto_detect=config.settings["devices"][board]["configuration"]["AUTO_DETECT"],
+                       mac_addr=config.settings["devices"][board]["configuration"]["MAC_ADDR"],
+                             ip=config.settings["devices"][board]["configuration"]["UDP_IP"],
+                           port=config.settings["devices"][board]["configuration"]["UDP_PORT"])
         elif config.settings["devices"][board]["configuration"]["TYPE"] == 'RaspberryPi':
             self.boards[board] = devices.RaspberryPi(
                        n_pixels=config.settings["devices"][board]["configuration"]["N_PIXELS"],
@@ -199,7 +205,7 @@ class Visualizer(BoardManager):
             if any(differences[j] >= self.min_percent_diff[i]\
                    and self.freq_channels[j][0] >= self.min_detect_amplitude[i]\
                             for j in range(*self.detection_ranges[i]))\
-                        and (time.time() - self.prev_freq_detects[i] > 0.2)\
+                        and (time.time() - self.prev_freq_detects[i] > 0.1)\
                         and len(self.freq_channels[0]) == self.freq_channel_history:
                 self.prev_freq_detects[i] = time.time()
                 self.current_freq_detects[i] = True
@@ -208,7 +214,7 @@ class Visualizer(BoardManager):
 
     def visualize_scroll(self, y):
         # Effect that scrolls colours corresponding to frequencies across the strip 
-        y = y**4.0
+        #y = y**1.5
         n_pixels = config.settings["devices"][self.board]["configuration"]["N_PIXELS"]
         y = np.copy(interpolate(y, n_pixels // 2))
         board_manager.signal_processers[self.board].common_mode.update(y)
@@ -515,17 +521,17 @@ class DSP(BoardManager):
     def __init__(self, board):
         # Name of board for which this dsp instance is processing audio
         self.board = board
-        # Initialise filters etc. I've no idea what most of these are for but i imagine i won't be getting rid of them soon 
-        self.fft_plot_filter = dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
+        # Initialise filters etc
+        self.fft_plot_filter = dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.99, alpha_rise=0.99)
         self.mel_gain =        dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.01, alpha_rise=0.99)
-        self.mel_smoothing =   dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.5, alpha_rise=0.99)
+        self.mel_smoothing =   dsp.ExpFilter(np.tile(1e-1, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.2, alpha_rise=0.99)
         self.gain =            dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_FFT_BINS"]), alpha_decay=0.001, alpha_rise=0.99)
         self.r_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.2, alpha_rise=0.99)
         self.g_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.05, alpha_rise=0.3)
         self.b_filt =          dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.1, alpha_rise=0.5)
         self.common_mode =     dsp.ExpFilter(np.tile(0.01, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2), alpha_decay=0.99, alpha_rise=0.01)
         self.p_filt =          dsp.ExpFilter(np.tile(1, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2)), alpha_decay=0.1, alpha_rise=0.99)
-        self.volume =          dsp.ExpFilter(config.settings["configuration"]["MIN_VOLUME_THRESHOLD"], alpha_decay=0.02, alpha_rise=0.02)
+        self.volume =          dsp.ExpFilter(config.settings["configuration"]["MIN_VOLUME_THRESHOLD"], alpha_decay=0.9, alpha_rise=0.02)
         self.p =               np.tile(1.0, (3, config.settings["devices"][self.board]["configuration"]["N_PIXELS"] // 2))
         # Number of audio samples to read every time frame
         self.samples_per_frame = int(config.settings["mic_config"]["MIC_RATE"] / config.settings["configuration"]["FPS"])
@@ -567,9 +573,9 @@ class DSP(BoardManager):
         mel = np.atleast_2d(YS).T * self.mel_y.T
         # Scale data to values more suitable for visualization
         mel = np.sum(mel, axis=0)
-        mel = mel**2.0
+        mel = mel**2
         # Gain normalization
-        self.mel_gain.update(np.max(gaussian_filter1d(mel, sigma=1.0)))
+        self.mel_gain.update(np.max(gaussian_filter1d(mel, sigma=0.1)))
         mel /= self.mel_gain.value
         mel = self.mel_smoothing.update(mel)
         x = np.linspace(config.settings["devices"][self.board]["configuration"]["MIN_FREQUENCY"], config.settings["devices"][self.board]["configuration"]["MAX_FREQUENCY"], len(mel))
@@ -813,7 +819,6 @@ class ColourManager():
             for effect in self.effects_using_gradients:
                 if config.settings["devices"][effect[0]]["effect_opts"][effect[1]][effect[2]] == name:
                     config.settings["devices"][effect[0]]["effect_opts"][effect[1]][effect[2]] = null_gradient
-
 
 class Microphone():
     """Controls the audio input, allowing device selection and streaming"""
@@ -1352,7 +1357,7 @@ If you have any questions, feel free to open an issue on the GitHub page.
             gen_valid_inputs = {}
             styles = ["", "border: 1px solid #3be820;", "border: 1px solid red;"]
             def valid_mac(x):
-                return True if re.match("[0-9a-f]{2}([-])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", test.lower()) else False
+                return True if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", test.lower()) else False
             def valid_ip(x):
                 try:
                     pieces = x.split('.')
@@ -1389,6 +1394,25 @@ If you have any questions, feel free to open an issue on the GitHub page.
                     # Validate MAC
                     if req_config_setting == "MAC_ADDR":
                         valid = valid_mac(test)
+                        req_widgets[current_device][req_config_setting][1].setText(test.replace(":", "-"))
+                    # Validate IP
+                    elif req_config_setting == "UDP_IP":
+                        valid = valid_ip(test)
+                    # Validate port
+                    elif req_config_setting == "UDP_PORT":
+                        valid = valid_int(test)
+                    else:
+                        valid = True
+                    req_valid_inputs[req_config_setting] = valid
+                    update_req_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
+            # PxMatrix
+            if current_device == "PxMatrix":
+                for req_config_setting in config.device_req_config[current_device]:
+                    test = req_widgets[current_device][req_config_setting][1].text()
+                    # Validate MAC
+                    if req_config_setting == "MAC_ADDR":
+                        valid = valid_mac(test)
+                        req_widgets[current_device][req_config_setting][1].setText(test.replace(":", "-"))
                     # Validate IP
                     elif req_config_setting == "UDP_IP":
                         valid = valid_ip(test)
