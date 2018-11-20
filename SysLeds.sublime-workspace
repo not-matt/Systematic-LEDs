@@ -1,0 +1,1204 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"colour",
+				"colour_value"
+			],
+			[
+				"new",
+				"new_name"
+			],
+			[
+				"colou",
+				"colour_name"
+			],
+			[
+				"colo",
+				"colours"
+			],
+			[
+				"gra",
+				"gradient"
+			],
+			[
+				"black",
+				"Black"
+			],
+			[
+				"eff",
+				"effect"
+			],
+			[
+				"setti",
+				"Settings"
+			],
+			[
+				"ef",
+				"effects_using_colours"
+			],
+			[
+				"gradie",
+				"gradients"
+			],
+			[
+				"dynami",
+				"dynamic_effects_config"
+			],
+			[
+				"dyn",
+				"dynamic_effects_config"
+			],
+			[
+				"boa",
+				"board_manager"
+			],
+			[
+				"user",
+				"user"
+			],
+			[
+				"updateC",
+				"updateColourDropdowns"
+			],
+			[
+				"def",
+				"default_colours"
+			],
+			[
+				"defaul",
+				"default_colours"
+			],
+			[
+				"defa",
+				"default_gradients"
+			],
+			[
+				"edit",
+				"editButton"
+			],
+			[
+				"wid",
+				"widgets"
+			],
+			[
+				"c",
+				"colour"
+			],
+			[
+				"colourDia",
+				"colourDialogueGridDeleteFuncs"
+			],
+			[
+				"setS",
+				"setStyleSheet"
+			],
+			[
+				"text",
+				"textChanged"
+			],
+			[
+				"colourD",
+				"colourDialogueGridEditButtons"
+			],
+			[
+				"addCol",
+				"addColourEditName"
+			],
+			[
+				"pale",
+				"palette_grid"
+			],
+			[
+				"colour_",
+				"colour_manager"
+			],
+			[
+				"pal",
+				"palette_buttons"
+			],
+			[
+				"button",
+				"buttons_layout"
+			],
+			[
+				"butt",
+				"buttons_layout"
+			],
+			[
+				"loadD",
+				"loadDefaultGradients"
+			],
+			[
+				"config",
+				"config"
+			],
+			[
+				"missing",
+				"missing_colours"
+			],
+			[
+				"grad",
+				"gradients"
+			],
+			[
+				"load",
+				"loadDefaultColours"
+			],
+			[
+				"gradien",
+				"gradient"
+			],
+			[
+				"used",
+				"used_in"
+			],
+			[
+				"grade",
+				"gradient"
+			],
+			[
+				"setupHe",
+				"setupHelperLayout"
+			],
+			[
+				"setupHel",
+				"setupHelperText"
+			],
+			[
+				"setupH",
+				"setupHelperLayout"
+			],
+			[
+				"remo",
+				"removeTab"
+			],
+			[
+				"delete",
+				"deleteLater"
+			],
+			[
+				"MIC",
+				"MIC_ID"
+			],
+			[
+				"mic",
+				"mic_config"
+			],
+			[
+				"dev",
+				"device_info"
+			],
+			[
+				"call",
+				"callback_func"
+			],
+			[
+				"mic_but",
+				"mic_button_group"
+			],
+			[
+				"py",
+				"py_audio"
+			],
+			[
+				"aud",
+				"audio_data"
+			],
+			[
+				"LED",
+				"LEDController"
+			],
+			[
+				"remDe",
+				"rem_device_button"
+			],
+			[
+				"Devi",
+				"devices"
+			],
+			[
+				"del",
+				"del_widgets"
+			],
+			[
+				"rem",
+				"remDeviceTabLayout"
+			],
+			[
+				"auto",
+				"auto_detect"
+			],
+			[
+				"req",
+				"required_config"
+			],
+			[
+				"Visuali",
+				"Visualizer"
+			],
+			[
+				"effe",
+				"effect_opts"
+			],
+			[
+				"gener",
+				"general_config"
+			],
+			[
+				"con",
+				"config"
+			],
+			[
+				"Frequ",
+				"Frequency"
+			],
+			[
+				"default",
+				"default_effect_opts"
+			],
+			[
+				"valid",
+				"valid_inputs"
+			],
+			[
+				"show",
+				"show_hide_addBoard_interface"
+			],
+			[
+				"valid_in",
+				"valid_inputs"
+			],
+			[
+				"val",
+				"valid_int"
+			],
+			[
+				"valid_",
+				"valid_ip"
+			],
+			[
+				"vali",
+				"valid_ip"
+			],
+			[
+				"te",
+				"test"
+			],
+			[
+				"widg",
+				"widgets"
+			],
+			[
+				"high",
+				"high_val"
+			],
+			[
+				"mids_",
+				"mids_val"
+			],
+			[
+				"low",
+				"lows_val"
+			],
+			[
+				"hig",
+				"high_val"
+			],
+			[
+				"check",
+				"checkbox"
+			],
+			[
+				"label",
+				"label_fps"
+			],
+			[
+				"fra",
+				"frame_counter"
+			],
+			[
+				"start",
+				"start_time"
+			],
+			[
+				"star",
+				"start_time"
+			],
+			[
+				"r",
+				"r"
+			],
+			[
+				"prev",
+				"prev_spectrum"
+			],
+			[
+				"tes",
+				"tests"
+			],
+			[
+				"Fa",
+				"False"
+			],
+			[
+				"Fad",
+				"Fadecandy"
+			],
+			[
+				"curren",
+				"current_device"
+			],
+			[
+				"device",
+				"device_req_config"
+			],
+			[
+				"conf",
+				"config"
+			],
+			[
+				"devi",
+				"device_type_cbox"
+			],
+			[
+				"addDe",
+				"addDeviceTabLayout"
+			],
+			[
+				"fade",
+				"fadecandy"
+			],
+			[
+				"true",
+				"True"
+			],
+			[
+				"b",
+				"blue"
+			],
+			[
+				"ease",
+				"ease_length"
+			],
+			[
+				"outpu",
+				"output"
+			],
+			[
+				"en",
+				"end_value"
+			],
+			[
+				"_eas",
+				"_easing_func"
+			],
+			[
+				"audio",
+				"audio_data"
+			],
+			[
+				"multi",
+				"multicolor_modes"
+			],
+			[
+				"anim",
+				"animation-duration"
+			],
+			[
+				"marg",
+				"margin-top"
+			],
+			[
+				"back",
+				"background-image"
+			],
+			[
+				"bord",
+				"border-radius"
+			],
+			[
+				"output",
+				"outputs"
+			],
+			[
+				"visu",
+				"visualizers"
+			],
+			[
+				"UDP",
+				"UDP_PORT"
+			],
+			[
+				"MAC",
+				"MAC_ADDR"
+			],
+			[
+				"boar",
+				"board_tabs"
+			],
+			[
+				"bo",
+				"board_tabs"
+			],
+			[
+				"main",
+				"main_wrapper"
+			],
+			[
+				"confi",
+				"configuration"
+			],
+			[
+				"CURR",
+				"current_effect"
+			],
+			[
+				"gui",
+				"gui_vis_checkboxes"
+			],
+			[
+				"grap",
+				"graph_view"
+			],
+			[
+				"Eff",
+				"Effect"
+			],
+			[
+				"GUI",
+				"GUI_opts"
+			],
+			[
+				"wrapp",
+				"wrapper_widgets"
+			],
+			[
+				"efe",
+				"effect_opts"
+			],
+			[
+				"use",
+				"use_defaults"
+			],
+			[
+				"update",
+				"update_config_dicts"
+			],
+			[
+				"settings",
+				"settings_dict"
+			],
+			[
+				"us",
+				"use_defaults"
+			],
+			[
+				"QS",
+				"QSettings"
+			],
+			[
+				"LE",
+				"LED_INVERT"
+			],
+			[
+				"F",
+				"False"
+			],
+			[
+				"UDP_",
+				"UDP_PORT"
+			],
+			[
+				"set",
+				"settings"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "python/main.py",
+			"settings":
+			{
+				"buffer_size": 113946,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "python/lib/config.py",
+			"settings":
+			{
+				"buffer_size": 28869,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "python/lib/devices.py",
+			"settings":
+			{
+				"buffer_size": 12046,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "python/lib/dsp.py",
+			"settings":
+			{
+				"buffer_size": 965,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "python/lib/gui.py",
+			"settings":
+			{
+				"buffer_size": 13146,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "python/lib/led.py",
+			"settings":
+			{
+				"buffer_size": 7757,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "python/lib/melbank.py",
+			"settings":
+			{
+				"buffer_size": 5008,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "python/lib/opc.py",
+			"settings":
+			{
+				"buffer_size": 6023,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "python/lib/qfloatslider.py",
+			"settings":
+			{
+				"buffer_size": 2168,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "python/lib/qrangeslider.py",
+			"settings":
+			{
+				"buffer_size": 9859,
+				"line_ending": "Windows"
+			}
+		}
+	],
+	"build_system": "Packages/Python/Python.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 434.0,
+		"last_filter": "Package Control: ",
+		"selected_items":
+		[
+			[
+				"Package Control: ",
+				"Package Control: Remove Package"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"pack",
+				"Install Package Control"
+			]
+		],
+		"width": 473.0
+	},
+	"console":
+	{
+		"height": 144.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/C/Users/Matthew Bowley/Documents/Python/Systematic LEDs/python"
+	],
+	"file_history":
+	[
+		"/C/Users/Matthew Bowley/youtube-dl.conf",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/config/sample_config.yaml",
+		"/C/Users/Matthew Bowley/AppData/Roaming/.ledfx/config.yaml",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/wavelength.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/temporal.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/spectrum.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/rainbow.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/mel.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/math.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/gradient.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/effects/audio.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/__main__.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/__init__.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/color.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/config.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/consts.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/core.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/http.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/utils.py",
+		"/C/Users/Matthew Bowley/AppData/Local/Programs/Python/Python36-32/Lib/site-packages/ledfxcontroller-0.1.0a0-py3.6.egg/ledfxcontroller/devices/__init__.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx/ledfxcontroller/devices/__init__.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LedFx_raw/ledfxcontroller/devices/__init__.py",
+		"/C/Users/Matthew Bowley/Desktop/pids.txt",
+		"/C/Users/Matthew Bowley/Desktop/5.html",
+		"/C/Users/Matthew Bowley/Desktop/4.html",
+		"/C/Users/Matthew Bowley/Desktop/3.html",
+		"/C/Users/Matthew Bowley/Desktop/2.html",
+		"/C/Users/Matthew Bowley/Desktop/1.html",
+		"/C/Users/Matthew Bowley/Documents/Python/Systematic LEDs/python/lib/microphone.py",
+		"/C/Users/Matthew Bowley/Documents/Chemistry/SPEC/4.TXT",
+		"/C/Users/Matthew Bowley/Documents/Chemistry/SPEC/3.TXT",
+		"/C/Users/Matthew Bowley/Documents/Chemistry/SPEC/2.TXT",
+		"/C/Users/Matthew Bowley/Documents/Chemistry/SPEC/1.TXT",
+		"/C/Users/Matthew Bowley/Documents/GitHub/audio-reactive-led-strip/python/main.py",
+		"/C/Users/Matthew Bowley/Documents/Python/ESP8266 BACKUP/audio-reactive-led-strip/python/main.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/melbank.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/qrangeslider.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/qfloatslider.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/microphone.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/gui.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/dsp.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/led.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/config.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/lib/devices.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/main.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python_from_git/lib/config.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python_from_git/main.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python old/python_runnable/main.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python old/python_runnable/lib/config.py",
+		"/C/Users/Matthew Bowley/bin/bootmetro/dist/assets/css/bootmetro.css",
+		"/C/Users/Matthew Bowley/bin/bootmetro/dist/assets/css/bootmetro-ui-light.css",
+		"/C/Users/Matthew Bowley/bin/bootmetro/dist/metro-layouts.html",
+		"/C/Users/Matthew Bowley/Documents/bootmetro/dist/assets/css/bootmetro.css",
+		"/C/Users/Matthew Bowley/Documents/bootmetro/dist/metro-layouts.html",
+		"/C/Users/Matthew Bowley/AppData/Roaming/Sublime Text 3/Packages/User/Package Control.sublime-settings",
+		"/C/Users/Matthew Bowley/AppData/Roaming/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/C/Users/Matthew Bowley/AppData/Roaming/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/config.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/visualization.py",
+		"/C/Users/Matthew Bowley/Desktop/dcom.olympus.assemblyline.v2.playerprefs.xml",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/python-beat-detector-master/beatDetector.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/led.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/dsp.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/microphone.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/melbank.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/python-beat-detector-master/ui_plot.py",
+		"/C/Users/Matthew Bowley/Documents/Python/Sum of Divisors/sum.py",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/nodemcu-flasher-master/Win64/Release/Config/Config.xml",
+		"/C/Users/Matthew Bowley/Documents/Python/LED Strip/audio-reactive-led-strip-master/python/gui.py",
+		"/C/Users/Matthew Bowley/Downloads/BLU-Vivo-6-V0110EE/boot.img",
+		"/C/ProgramData/OriginLab/93/Regid.lic",
+		"/C/Users/Matthew Bowley/AppData/Local/Programs/Python/Python36-32/Scripts/cxfreeze-quickstart",
+		"/C/Users/Matthew Bowley/AppData/Local/Programs/Python/Python36-32/Scripts/cxfreeze",
+		"/F/SS-Backup-001/Message/20170104111955_Izzy Gatenby.vmg",
+		"/E/OriginLab/Origin 2016/ORIGIN.OTM",
+		"/E/OriginLab/Origin 2016/64Bit/lib/tk8.5/demos/license.terms",
+		"/E/OriginLab/2016/User Files/Custom.ogs",
+		"/E/OriginLab/2016/User Files/SYSTEM.CNF"
+	],
+	"find":
+	{
+		"height": 23.0
+	},
+	"find_in_files":
+	{
+		"height": 116.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"_easing_gradient_generator",
+			"round",
+			"python",
+			"RegistryLoader",
+			"Devices",
+			"win32api",
+			"failed to create process.",
+			"process",
+			"failed",
+			"faile",
+			"failed",
+			"unable"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "python/main.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 113946,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								46762,
+								46831
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 8628.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "python/lib/config.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 28869,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								782,
+								782
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "python/lib/devices.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 12046,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "python/lib/dsp.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 965,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "python/lib/gui.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 13146,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "python/lib/led.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7757,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "python/lib/melbank.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 5008,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1179,
+								1179
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 624.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "python/lib/opc.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6023,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 9,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "python/lib/qfloatslider.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2168,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "python/lib/qrangeslider.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 9859,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 22.0
+	},
+	"input":
+	{
+		"height": 37.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 169.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.hex_viewer_inspector":
+	{
+		"height": 114.0
+	},
+	"pinned_build_system": "Packages/Python/Python.sublime-build",
+	"project": "SysLeds.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"C:\\Users\\Matthew Bowley\\Documents\\Python\\LedFx\\LedFx.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+		"last_automatic_layout":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		]
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 166.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+		"max_columns": 1
+	}
+}
