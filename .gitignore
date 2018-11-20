@@ -10,6 +10,10 @@ python/lib/settings.ini
 python/lib/colours.ini
 python/lib/gradients.ini
 
+# sublime config files
+SysLeds.sublime-project
+SysLeds.sublime-workspace
+
 # arduino tests
 arduino/Mario_example
 arduino/PxMatrix_controller
