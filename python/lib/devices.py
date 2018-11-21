@@ -382,8 +382,72 @@ class DotStar(LEDController):
         self.led_data[0:,1:4] = pixels[bgr].T.clip(0,255)
         self.strip.show()
 
+
+class sACNClient(LEDController):
+    def __init__(self,
+                 start_universe=1,
+                 start_channel=1,
+                 channel_count=3,
+                 universe_size=512,
+                 fps=30,
+                 ip='192.168.1.180'):
+        """Initialize object for communicating with as E1.31 capable device.
+        Parameters
+        ----------
+        start_universe: int, optional
+            The start universe for the strip
+        start_channel: int, optional
+            The state channel offset within the universe
+        channel_count: int, optional
+            The total number of channels for the device. Typically this will
+            be 3 * N_PIXELS as you need a sperate channel for the red, green,
+            and blue components
+        universe_size: int, optional
+            The number of channels in each universe. This should pretty much
+            never be changed unless using a controller that only support 510
+            channels.
+        ip: str, optional
+            The IP address of a E1.31 capable device on the network.
+        fps: int, optional
+            The frequency in which to flush the DMX buffer out. This does
+            not need to align with the actually processing rate. Running
+            the processing at 60fps and flusing at 30fps provides a pretty
+            good balance.
+        """
+        import sacn
+        self._ip = ip
+        self._start_universe = start_universe
+        self._start_channel = start_channel
+        self._channel_count = channel_count
+        self._universe_size = universe_size
+        self._sender = sacn.sACNsender()
+        self._sender._fps = fps
+        self._sender.start()
+
+        self._stop_universe = start_universe + round(0.5 + ((start_channel + channel_count) / universe_size))
+        for universe in range(self._start_universe, self._stop_universe):
+            self._sender.activate_output(universe)
+            self._sender[universe].destination = ip
+            self._sender[universe].multicast = False
+
+    def __del__(self):
+        self._sender.stop()
+
+    def show(self, pixels):
+        """
+        Calculate the mapping for pixels to universe and channel and populate
+        the dmx buffer for each universe. The dmx buffer will be flushed by a
+        background thread created by the sACNSender class.
+        """
+        message = pixels.T.clip(0, config.settings["configuration"]["MAX_BRIGHTNESS"]).astype(np.uint8).ravel().tostring()
+        for universe in range(self._start_universe, self._stop_universe):
+            pixel_start = (universe - self._start_universe) * self._universe_size
+            pixel_end = min(pixel_start + self._universe_size, len(message))
+            self._sender[universe].dmx_data = message[pixel_start:pixel_end]
+
 class Stripless(LEDController):
     def __init__(self):
         pass
     def show(self, pixels):
         pass
+

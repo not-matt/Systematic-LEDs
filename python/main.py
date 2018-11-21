@@ -64,6 +64,14 @@ class BoardManager():
             self.boards[board] = devices.BlinkStick()
         elif config.settings["devices"][board]["configuration"]["TYPE"] == 'DotStar':
             self.boards[board] = devices.DotStar()
+        elif config.settings["devices"][board]["configuration"]["TYPE"] == 'sACNClient':
+            self.boards[board] = devices.sACNClient(
+                            ip = config.settings["devices"][board]["configuration"]["IP"],
+                start_universe = config.settings["devices"][board]["configuration"]["START_UNIVERSE"],
+                 start_channel = config.settings["devices"][board]["configuration"]["START_CHANNEL"],
+                 universe_size = config.settings["devices"][board]["configuration"]["UNIVERSE_SIZE"],
+                 channel_count = config.settings["devices"][board]["configuration"]["N_PIXELS"] * 3,
+                           fps = config.settings["configuration"]["FPS"])
         elif config.settings["devices"][board]["configuration"]["TYPE"] == 'Stripless':
             self.boards[board] = devices.Stripless()
         if config.settings["configuration"]["USE_GUI"]:
@@ -2009,6 +2017,7 @@ update_config_dicts()
 
 # Initialise board(s)
 board_manager = BoardManager()
+
 
 # Initialise Colour Manager
 colour_manager = ColourManager()
