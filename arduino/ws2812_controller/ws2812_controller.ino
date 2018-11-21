@@ -4,6 +4,7 @@
 #include <WiFiUdp.h>
 
 #define FASTLED_ESP8266_DMA // better control for ESP8266 will output or RX pin requires fork https://github.com/coryking/FastLED
+#define FASTLED_ALLOW_INTERRUPTS 0  // Reduce flickering
 #include "FastLED.h"
 
 /************ Network Information (CHANGE THESE FOR YOUR SETUP) ************************/
@@ -13,17 +14,17 @@ const char* password = "WIFI_PASSWORD";
 const char* sensor_name = "TEST_SENSOR_HOSTNAME";
 const char* ota_password = "OTA_PASSWORD";
 
-const bool static_ip = true;
-IPAddress ip(192, 168, 1, 112);
-IPAddress gateway(192, 168, 1, 1);
+const bool static_ip = false;
+IPAddress ip(192, 168, 137, 170);
+IPAddress gateway(192, 168, 137, 1);
 IPAddress subnet(255, 255, 255, 0);
 
 const int udp_port = 7778;
 
 /*********************************** FastLED Defintions ********************************/
-#define NUM_LEDS      250
-#define DATA_PIN      5
-//#define CLOCK_PIN   2
+#define NUM_LEDS      74
+#define DATA_PIN      7
+//#define CLOCK_PIN     2
 #define CHIPSET       WS2812B
 #define COLOR_ORDER   GRB
 
@@ -122,10 +123,15 @@ void loop() {
   int packetSize = port.parsePacket();
   if (packetSize == sizeof(leds)) {
     port.read((char*)leds, sizeof(leds));
+    Serial.printf(".");
     FastLED.show();
+    // flush the serial buffer
+    while(Serial.available()) { Serial.read(); } 
   } else if (packetSize) {
     Serial.printf("Invalid packet size: %u (expected %u)\n", packetSize, sizeof(leds));
     port.flush();
     return;
+  } else {
+    Serial.printf("~");
   }
 }

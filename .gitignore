@@ -5,6 +5,18 @@ ehthumbs.db
 # Folder config file
 Desktop.ini
 
+# Program settings files
+python/lib/settings.ini
+python/lib/colours.ini
+python/lib/gradients.ini
+
+# arduino tests
+arduino/Mario_example
+arduino/PxMatrix_controller
+arduino/WLED-master
+arduino/WLEDsquared-master
+arduino/ws2812_controller_old
+
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
@@ -47,3 +59,5 @@ Temporary Items
 .apdisk
 *.pyc
 *.pdf
+settings.ini
+*.ini

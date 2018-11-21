@@ -2,26 +2,44 @@ import time
 import numpy as np
 import lib.config as config
 
-_GAMMA_TABLE = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-                1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5,
-                5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11,
-                11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17,
-                18, 18, 19, 19, 20, 20, 21, 21, 22, 23, 23, 24, 24, 25,
-                26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 32, 33, 34, 35,
-                35, 36, 37, 38, 38, 39, 40, 41, 42, 42, 43, 44, 45, 46,
-                47, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58,
-                59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 73,
-                74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88,
-                89, 91, 92, 93, 94, 95, 97, 98, 99, 100, 102, 103, 104,
-                105, 107, 108, 109, 111, 112, 113, 115, 116, 117, 119,
-                120, 121, 123, 124, 126, 127, 128, 130, 131, 133, 134,
-                136, 137, 139, 140, 142, 143, 145, 146, 148, 149, 151,
-                152, 154, 155, 157, 158, 160, 162, 163, 165, 166, 168,
-                170, 171, 173, 175, 176, 178, 180, 181, 183, 185, 186,
-                188, 190, 192, 193, 195, 197, 199, 200, 202, 204, 206,
-                207, 209, 211, 213, 215, 217, 218, 220, 222, 224, 226,
-                228, 230, 232, 233, 235, 237, 239, 241, 243, 245, 247,
-                249, 251, 253, 255]
+# _GAMMA_TABLE = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+#                 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5,
+#                 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11,
+#                 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17,
+#                 18, 18, 19, 19, 20, 20, 21, 21, 22, 23, 23, 24, 24, 25,
+#                 26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 32, 33, 34, 35,
+#                 35, 36, 37, 38, 38, 39, 40, 41, 42, 42, 43, 44, 45, 46,
+#                 47, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58,
+#                 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 73,
+#                 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88,
+#                 89, 91, 92, 93, 94, 95, 97, 98, 99, 100, 102, 103, 104,
+#                 105, 107, 108, 109, 111, 112, 113, 115, 116, 117, 119,
+#                 120, 121, 123, 124, 126, 127, 128, 130, 131, 133, 134,
+#                 136, 137, 139, 140, 142, 143, 145, 146, 148, 149, 151,
+#                 152, 154, 155, 157, 158, 160, 162, 163, 165, 166, 168,
+#                 170, 171, 173, 175, 176, 178, 180, 181, 183, 185, 186,
+#                 188, 190, 192, 193, 195, 197, 199, 200, 202, 204, 206,
+#                 207, 209, 211, 213, 215, 217, 218, 220, 222, 224, 226,
+#                 228, 230, 232, 233, 235, 237, 239, 241, 243, 245, 247,
+#                 249, 251, 253, 255]
+
+_GAMMA_TABLE = [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,
+                1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,
+                2,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  5,  5,  5,
+                5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  9,  9,  9, 10,
+               10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
+               17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
+               25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
+               37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
+               51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
+               69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
+               90, 92, 93, 95, 96, 98, 99,101,102,104,105,107,109,110,112,114,
+              115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,
+              144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
+              177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
+              215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255]
+              
 _GAMMA_TABLE = np.array(_GAMMA_TABLE)
 
 class LEDController:
@@ -141,7 +159,83 @@ class ESP8266(LEDController):
             g (0 to 255): Green value of LED
             b (0 to 255): Blue value of LED
         """
-        message = pixels.T.clip(0, config.settings["configuration"]["MAX_BRIGHTNESS"]).astype(np.uint8).ravel().tostring()
+        message = pixels.T.clip(0, config.settings["configuration"]["MAX_BRIGHTNESS"]).astype(np.uint32).ravel()
+        message = _GAMMA_TABLE[message].astype(np.uint8).tostring()
+        self._sock.sendto(message, (self._ip, self._port))
+
+class PxMatrix(LEDController):
+    def __init__(self, auto_detect=False,
+                 mac_addr="aa-bb-cc-dd-ee-ff",
+                 ip='192.168.0.150',
+                 port=7778):
+        """Initialize object for communicating with as ESP8266 based PxMatrix Controller
+        Parameters
+        ----------
+        auto_detect: bool, optional
+            Automatically search for and find devices on windows hotspot
+            with given mac addresses. Windows hotspot resets the IP
+            addresses of any devices on reset, meaning the IP of the 
+            ESP8266 changes every time you turn on the hotspot. This
+            will find the IP address of the devices for you.
+        mac_addr: str, optional
+            The MAC address of the ESP8266 on the network. Only used if
+            auto-detect is used
+        ip: str, optional
+            The IP address of the ESP8266 on the network. This must exactly
+            match the IP address of your ESP8266 device, unless using
+            the auto-detect feature.
+        port: int, optional
+            The port number to use when sending data to the ESP8266. This
+            must exactly match the port number in the ESP8266's firmware.
+        """
+        import socket
+        self._mac_addr = mac_addr
+        self._ip = ip
+        self._port = port
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        if auto_detect:
+            self.detect()
+
+    def detect(self):
+        from subprocess import check_output
+        from time import sleep
+        """ Uses "arp -a" to find esp8266 on windows hotspot"""
+        # Find the audio strip automagically
+        ip_addr = False
+        while not ip_addr:
+            arp_out = check_output(['arp', '-a']).splitlines()
+            for i in arp_out:
+                if self._mac_addr in str(i):
+                    ip_addr = i.split()[0].decode("utf-8")
+                    break
+            else:
+                print("Device not found at physical address {}, retrying in 1s".format(self._mac_addr))
+                sleep(1)
+        print("Found device {}, with IP address {}".format(self._mac_addr, ip_addr))
+        self._ip = ip_addr
+
+    def flatten_and_clip(self, pixels):
+        print(pixels)
+        pixels = np.reshape(pixels, len(pixels)*4, order='F')
+        pixels = pixels[len(pixels)//4:]
+        pixels = numpy.reshape(pixels, (3, len(pixels)//3)).T
+        return pixels
+
+    def RGB565_array(self, array):
+        output = np.empty(len(array), dtype=np.uint16)
+        for i in range(len(array)):
+            output[i] = (((array[i][0] & 0b11111000) << 8) | ((array[i][1] & 0b11111100) << 3) | (array[i][2] >> 3))
+        return output
+
+    def show(self, pixels):
+        """Sends UDP packets to ESP8266 to update PxMatrix
+        The ESP8266 will receive an image to display on the matrix.
+        """
+        #message = self.flatten_and_clip(pixels)
+        message = self.RGB565_array(pixels.T.astype(np.uint16))
+        # print(len(message))
+        # print(message[0])
+        message = message[:700].ravel().tostring()
         self._sock.sendto(message, (self._ip, self._port))
 
 
@@ -255,7 +349,7 @@ class RaspberryPi(LEDController):
         rgb = np.bitwise_or(np.bitwise_or(r, g), b)
         # Update the pixels
         for i in range(n_pixels):
-            self.strip._led_data[i] = rgb[i]
+            self.strip.setPixelColor(i, neopixel.Color(rgb[i]))
         self.strip.show()
 
 
@@ -287,6 +381,7 @@ class DotStar(LEDController):
         bgr = [2,1,0]
         self.led_data[0:,1:4] = pixels[bgr].T.clip(0,255)
         self.strip.show()
+
 
 class sACNClient(LEDController):
     def __init__(self,
@@ -349,3 +444,10 @@ class sACNClient(LEDController):
             pixel_start = (universe - self._start_universe) * self._universe_size
             pixel_end = min(pixel_start + self._universe_size, len(message))
             self._sender[universe].dmx_data = message[pixel_start:pixel_end]
+
+class Stripless(LEDController):
+    def __init__(self):
+        pass
+    def show(self, pixels):
+        pass
+
