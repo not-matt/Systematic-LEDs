@@ -1459,6 +1459,16 @@ If you have any questions, feel free to open an issue on the GitHub page.
                         valid = True
                     req_valid_inputs[req_config_setting] = valid
                     update_req_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
+            elif current_device == "sACNClient":
+                for req_config_setting in config.device_req_config[current_device]:
+                    test = req_widgets[current_device][req_config_setting][1].text()
+                    # Validate Server
+                    if req_config_setting == "IP":
+                        valid = valid_ip(test)
+                    else:
+                        valid = True
+                    req_valid_inputs[req_config_setting] = valid
+                    update_req_box_highlight(req_config_setting, (1 if valid else 2) if test else 0)
             # Other devices without required config
             elif not config.device_req_config[current_device]:
                 pass
