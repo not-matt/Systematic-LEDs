@@ -1,3 +1,7 @@
+## This project is no longer being developed.
+
+Please go to https://github.com/ahodges9/LedFx for the latest in funky lighting!
+
 ## Systematic LEDs
 
 All in one lighting solution for your computer. Mood lighting? Club effects?
