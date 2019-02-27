@@ -1,6 +1,7 @@
 ## This project is no longer being developed.
 
 Please go to https://github.com/ahodges9/LedFx for the latest in funky lighting!
+
 Good news! **LedFX works using the same ESP firmware as Systematic LEDs**
 All you have to do is download and install LedFX, add the ESP device(s), and you're good to go :D
 
