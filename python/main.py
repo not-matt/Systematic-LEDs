@@ -855,9 +855,15 @@ class Microphone():
         # set device to stream from by the id of the device
         if not device_id in range(0,self.numdevices):
             raise ValueError("No device with id {}".format(device_id))
-        self.device_id = self.devices[device_id]["index"]
-        self.device_name = self.devices[device_id]["name"]
-        self.device_rate = int(self.devices[device_id]["defaultSampleRate"])
+        
+        device_pos = device_id
+        for device in self.devices:
+            if device["index"] == device_id:
+                device_pos = self.devices.index(device)
+
+        self.device_id = self.devices[device_pos]["index"]
+        self.device_name = self.devices[device_pos]["name"]
+        self.device_rate = int(self.devices[device_pos]["defaultSampleRate"])
         self.frames_per_buffer = self.device_rate // config.settings["configuration"]["FPS"]
 
         config.settings["mic_config"]["MIC_ID"] = self.device_id
