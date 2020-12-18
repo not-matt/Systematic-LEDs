@@ -2,13 +2,14 @@
 
 Please go to https://github.com/LedFx/LedFx for the latest in funky lighting!
 
-Good news! **LedFX is compatable with WLED, and the ESP firmware used by Systematic LEDs AND Scott Lawson's audio-reactive-led-strip.**
+Good news! **LedFx is compatable with WLED, and the ESP firmware used by Systematic LEDs AND Scott Lawson's audio-reactive-led-strip.**
 
 LedFx couldn't be simpler to get running if you're a WLED user.
- 1 - Download and install from https://ledfx.app 
- 2 - Run LedFx and your WLED devices will be detected automatically, ready for you to use!
 
-All you have to do is download and install LedFX, add the ESP device(s), and you're good to go :D
+1. Download and install from https://ledfx.app 
+2. Run LedFx and your WLED devices will be detected automatically, ready for you to use!
+
+All you have to do is download and install LedFx, add the ESP device(s), and you're good to go :D
 
 ## Systematic LEDs
 
