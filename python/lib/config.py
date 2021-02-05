@@ -101,7 +101,23 @@ device_req_config = {"Stripless"   : None, # duh
                      "Fadecandy"   : {"SERVER"     : ["Server Address",
                                                       "Address of Fadecandy server",
                                                       "textbox",
-                                                      "localhost:7890"]}
+                                                      "localhost:7890"]},
+                     "sACNClient"  : {"IP"         : ["IP Address",
+                                                      "IP Address of ACN Device(non-multicast)",
+                                                      "textbox",
+                                                      "xxx.xxx.xxx.xxx"],
+                                      "START_UNIVERSE" : ["Start Universe",
+                                                          "Universe Number of first Pixel",
+                                                          "textbox-int",
+                                                          "1"],
+                                      "START_CHANNEL"  : ["Start Channel",
+                                                          "Channel Number of first Pixel",
+                                                          "textbox-int",
+                                                          "1"],
+                                      "UNIVERSE_SIZE"  : ["Universe Size",
+                                                          "Number of Channels per Universe",
+                                                          "textbox-int",
+                                                          "512"]}
                      }
 
 # General config used by GUI to generate add board interface
@@ -416,6 +432,8 @@ for board in settings["devices"]:
     elif settings["devices"][board]["configuration"]["TYPE"] == 'Fadecandy':
         settings["devices"][board]["configuration"]["SOFTWARE_GAMMA_CORRECTION"] = False
     elif settings["devices"][board]["configuration"]["TYPE"] == 'Stripless':
+        settings["devices"][board]["configuration"]["SOFTWARE_GAMMA_CORRECTION"] = False
+    elif settings["devices"][board]["configuration"]["TYPE"] == 'sACNClient':
         settings["devices"][board]["configuration"]["SOFTWARE_GAMMA_CORRECTION"] = False
     else:
         raise ValueError("Invalid device selected. Device {} not known.".format(settings["devices"][board]["configuration"]["TYPE"]))
